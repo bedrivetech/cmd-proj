@@ -791,9 +791,12 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-800" dir="rtl">
       <header className="bg-white shadow-sm sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+          {/* Header Container */}
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="flex items-center gap-3">
+            
+            {/* Right Side: Title & Icon (Order 2 on mobile, 1 on desktop) */}
+            <div className="flex items-center gap-3 w-full md:w-auto justify-center md:justify-start order-2 md:order-1">
               <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-blue-200">
                 <LayoutDashboard className="w-6 h-6" />
               </div>
@@ -802,7 +805,8 @@ export default function App() {
                 <p className="text-xs text-gray-500">منظومة متابعة التصاميم والإشراف</p>
               </div>
             </div>
-                        {/* Center: Logo (Order 1 on mobile to be on top, 2 on desktop to be in middle) */}
+
+            {/* Center: Logo (Order 1 on mobile to be on top, 2 on desktop to be in middle) */}
             <div className="order-1 md:order-2 mb-2 md:mb-0">
                {/* ملاحظة: تأكد من وضع ملف الصورة 'download (1).jpg' في المجلد العام public folder */}
                <img 
@@ -814,7 +818,9 @@ export default function App() {
                  }}
                />
             </div>
-            <div className="flex items-center gap-3 w-full md:w-auto">
+            
+            {/* Left Side: Search & Action (Order 3) */}
+            <div className="flex items-center gap-3 w-full md:w-auto justify-center md:justify-end order-3">
                <div className="relative flex-1 md:flex-none md:w-64">
                 <Search className="w-4 h-4 absolute right-3 top-3 text-gray-400" />
                 <input 
