@@ -52,7 +52,6 @@ import {
 
 // 🔴 خطوة 1: لاستخدام قاعدة البيانات الخاصة بك، استبدل `null` بالكائن الخاص بك أدناه.
 // يمكنك الحصول عليه من: Firebase Console > Project settings > General > Your apps
-const YOUR_FIREBASE_CONFIG = cmdec-project; 
 
 const YOUR_FIREBASE_CONFIG = {
   apiKey: "AIzaSyDSvi9dNBsXIjgv3yE2TZzBslk8QgYuv50",
