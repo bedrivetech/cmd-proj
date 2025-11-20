@@ -802,7 +802,18 @@ export default function App() {
                 <p className="text-xs text-gray-500">منظومة متابعة التصاميم والإشراف</p>
               </div>
             </div>
-            
+                        {/* Center: Logo (Order 1 on mobile to be on top, 2 on desktop to be in middle) */}
+            <div className="order-1 md:order-2 mb-2 md:mb-0">
+               {/* ملاحظة: تأكد من وضع ملف الصورة 'download (1).jpg' في المجلد العام public folder */}
+               <img 
+                 src="download (1).jpg" 
+                 alt="CMDEC Logo" 
+                 className="h-20 object-contain" 
+                 onError={(e) => {
+                   e.target.style.display = 'none';
+                 }}
+               />
+            </div>
             <div className="flex items-center gap-3 w-full md:w-auto">
                <div className="relative flex-1 md:flex-none md:w-64">
                 <Search className="w-4 h-4 absolute right-3 top-3 text-gray-400" />
