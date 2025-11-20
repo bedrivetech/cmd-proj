@@ -782,7 +782,7 @@ export default function App() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50" dir="rtl">
         <div className="text-center">
           <Loader2 className="w-10 h-10 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-500">جاري تحميل المشاريع...</p>
+          <p className="text-gray-500">جاري تحميل المشاريع - مرحبا بك في CMDEC...</p>
         </div>
       </div>
     );
@@ -798,7 +798,7 @@ export default function App() {
                 <LayoutDashboard className="w-6 h-6" />
               </div>
               <div>
-                <h1 className="text-xl font-extrabold text-gray-900">إدارة المكتب الهندسي</h1>
+                <h1 className="text-xl font-extrabold text-gray-900">لوحة تحكم المشاريع</h1>
                 <p className="text-xs text-gray-500">منظومة متابعة التصاميم والإشراف</p>
               </div>
             </div>
