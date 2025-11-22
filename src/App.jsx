@@ -24,7 +24,12 @@ import {
   UserCog,
   Landmark,
   Gavel,
-  History
+  History,
+  Banknote,
+  AlertTriangle,
+  PlayCircle,
+  Database,
+  Wifi
 } from 'lucide-react';
 
 // --- Firebase Imports ---
@@ -50,8 +55,13 @@ import {
 // ⚙️ إعدادات قاعدة البيانات (FIREBASE CONFIGURATION)
 // ==========================================================================
 
-// 🔴 خطوة 1: لاستخدام قاعدة البيانات الخاصة بك، استبدل `null` بالكائن الخاص بك أدناه.
-// يمكنك الحصول عليه من: Firebase Console > Project settings > General > Your apps
+/**
+ * 🔴 تعليمات إضافة قاعدة البيانات الخاصة بك:
+ * 1. اذهب إلى Firebase Console > Project Settings.
+ * 2. انسخ كائن `firebaseConfig`.
+ * 3. الصقه مكان `null` في المتغير أدناه.
+ * * ملاحظة: تأكد من تفعيل "Anonymous Auth" و "Firestore Database" في لوحة تحكم Firebase.
+ */
 
 const YOUR_FIREBASE_CONFIG = {
   apiKey: "AIzaSyDSvi9dNBsXIjgv3yE2TZzBslk8QgYuv50",
@@ -62,8 +72,8 @@ const YOUR_FIREBASE_CONFIG = {
   appId: "1:624320915226:web:0a317d1aa4e2c052006ea3"
 };
 
-
-// 🔴 خطوة 2: هذا الكود يختار تلقائياً بين إعداداتك أو إعدادات البيئة التجريبية
+// --- التهيئة الذكية (Smart Initialization) ---
+// نستخدم إعداداتك إذا وجدت، وإلا نستخدم البيئة التجريبية
 const envConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
 const firebaseConfig = YOUR_FIREBASE_CONFIG || envConfig;
 
@@ -72,21 +82,24 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// تحديد المسارات تلقائياً
+// متغيرات التحكم في المسارات
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 const USE_CUSTOM_DB = !!YOUR_FIREBASE_CONFIG; // هل نستخدم قاعدة بيانات خاصة؟
 
-// دالة مساعدة للحصول على مسار المجموعة الصحيح
+// --- المسارات الذكية (Smart Path Selectors) ---
+// هذه الدوال تختار المسار الأسرع والأنسب بناءً على نوع الاتصال
+
+// 1. الحصول على مسار المجموعة (لتغذية البيانات وقراءتها)
 const getProjectsCollection = () => {
   if (USE_CUSTOM_DB) {
-    // مسار بسيط عند استخدام قاعدتك الخاصة
+    // مسار مباشر وسريع في قاعدتك الخاصة
     return collection(db, 'projects');
   }
-  // مسار البيئة التجريبية
+  // مسار البيئة التجريبية المعزولة
   return collection(db, 'artifacts', appId, 'public', 'data', 'projects');
 };
 
-// دالة مساعدة للحصول على مسار المستند الصحيح
+// 2. الحصول على مسار المستند (للتعديل والحذف)
 const getProjectDoc = (id) => {
   if (USE_CUSTOM_DB) {
     return doc(db, 'projects', id);
@@ -97,16 +110,38 @@ const getProjectDoc = (id) => {
 // ==========================================================================
 
 // --- AI Configuration ---
-const apiKey = "AIzaSyDRVla9f593dBhdLLSZhhv1v7V7DeejUuE"; // Injected by environment
+const apiKey = "AIzaSyDRVla9f593dBhdLLSZhhv1v7V7DeejUuE"; 
 const AI_MODEL_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
 // --- Constants ---
+
 const FILTERS = [
-  { id: 'all', label: 'الكل' },
-  { id: 'current', label: 'مشاريع قائمة', icon: Activity, color: 'text-green-600', bg: 'bg-green-50' },
-  { id: 'bidding', label: 'تحت التسعير والدراسة', icon: FileText, color: 'text-amber-600', bg: 'bg-amber-50' },
-  { id: 'government', label: 'منافسات حكومية', icon: Building2, color: 'text-purple-600', bg: 'bg-purple-50' },
-  { id: 'new', label: 'مشاريع جديدة', icon: Briefcase, color: 'text-blue-600', bg: 'bg-blue-50' },
+  { id: 'all', label: 'الكل', icon: LayoutDashboard },
+  { id: 'ongoing', label: 'مشاريع مستمرة', icon: PlayCircle, color: 'text-green-600', bg: 'bg-green-50' },
+  { id: 'under_study', label: 'تحت الدراسة', icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50' },
+  { id: 'stalled', label: 'مشاريع متعثرة', icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50' },
+  { id: 'financially_halted', label: 'متوقفة مالياً', icon: Banknote, color: 'text-amber-600', bg: 'bg-amber-50' },
+  { id: 'source_private', label: 'قطاع خاص', icon: Briefcase },
+  { id: 'source_etimad', label: 'منصة اعتماد', icon: Landmark },
+  { id: 'source_modon', label: 'منصة مدن', icon: Building2 },
+  { id: 'source_gov', label: 'مناقصات حكومية', icon: Gavel },
+  { id: 'source_royal', label: 'الهيئات الملكية', icon: Landmark },
+];
+
+const EXECUTION_STATUS_OPTIONS = [
+  { id: 'ongoing', label: 'مستمر', color: 'text-green-700 bg-green-50 border-green-200' },
+  { id: 'stalled', label: 'متعثر', color: 'text-red-700 bg-red-50 border-red-200' },
+  { id: 'financially_halted', label: 'متوقف مالياً', color: 'text-amber-700 bg-amber-50 border-amber-200' },
+  { id: 'under_study', label: 'تحت الدراسة', color: 'text-blue-700 bg-blue-50 border-blue-200' },
+  { id: 'completed', label: 'مكتمل', color: 'text-gray-700 bg-gray-50 border-gray-200' },
+];
+
+const PROJECT_SOURCES = [
+  'مشروع خاص', 
+  'مشروع من منصة اعتماد', 
+  'مشروع من منصة مدن', 
+  'مشروع مناقصة حكومية', 
+  'مشاريع الهيئات الملكية'
 ];
 
 const STATUS_OPTIONS = [
@@ -123,14 +158,6 @@ const SUBMISSION_STAGES = [
   'لم تتم الترسية'
 ];
 
-const PROJECT_SOURCES = [
-  'مشروع خاص', 
-  'مشروع من منصة اعتماد', 
-  'مشروع من منصة مدن', 
-  'مشروع مناقصة حكومية', 
-  'مشاريع الهيئات الملكية'
-];
-
 const SERVICE_TYPES = [
   { id: 'design', label: 'تصميم', icon: Ruler },
   { id: 'supervision', label: 'إشراف', icon: HardHat },
@@ -143,9 +170,9 @@ const SERVICE_TYPES = [
 const SAUDI_LOCATIONS = [
   'الرياض', 'جدة', 'مكة المكرمة', 'المدينة المنورة', 
   'الدمام', 'الخبر', 'الظهران', 'الاحساء', 'القطيف', 'الجبيل',
-  'القصيم', 'بريدة', 'عنيزة', 
+  'القصيم', 'بريدة', 'رأس الخير', 
   'أبها', 'خميس مشيط', 'جازان', 'نجران', 
-  'تبوك', 'حائل', 'عرعر', 'الجوف', 'رأس الخير', 
+  'تبوك', 'حائل', 'عرعر', 'الجوف', 'نيوم', 
   'الباحة', 'الطائف', 'ينبع', 'بيشة', 'حفر الباطن'
 ];
 
@@ -167,22 +194,22 @@ const AIAdvisor = ({ projects }) => {
     setError(null);
 
     const prompt = `
-      بصفتك مستشار تخطيط استراتيجي لمكتب استشاري هندسي، قم بتحليل البيانات التالية للمشاريع.
+      بصفتك مستشار تخطيط مالي واستراتيجي لمكتب هندسي، قم بتحليل المشاريع التالية بدقة.
       
-      قدم تقريراً مهنياً مختصراً باللغة العربية:
-      1. **توزيع الخدمات:** نسبة مشاريع التصميم vs الإشراف.
-      2. **تحليل المصادر:** التركيز على الجهات (اعتماد، خاص، إلخ).
-      3. **آخر التحديثات:** نظرة على المشاريع التي تم تحديث حالتها مؤخراً وهل هناك تأخير في الردود؟
-      4. **توصيات:** نصائح للتركيز عليها الفترة القادمة.
+      قدم تقريراً مهنياً مختصراً باللغة العربية يركز على:
+      1. **الوضع المالي والتحصيل:** قارن المبالغ المحصلة بإجمالي العقود.
+      2. **تحليل الجدول الزمني:** حدد المشاريع التي تجاوزت تاريخ نهايتها.
+      3. **توزيع المخاطر:** حلل نسبة المشاريع المتعثرة.
+      4. **توصيات:** نصائح عاجلة.
 
       بيانات المشاريع:
       ${JSON.stringify(projects.map(p => ({
         name: p.name,
-        serviceType: p.serviceType,
+        executionStatus: p.executionStatus,
         projectSource: p.projectSource,
-        submissionStage: p.submissionStage,
-        lastUpdateDate: p.lastUpdateDate,
-        lastUpdateNote: p.lastUpdateNote,
+        contractEndDate: p.contractEndDate,
+        price: p.price,
+        collectedAmount: p.collectedAmount,
         status: p.status
       })))}
     `;
@@ -214,7 +241,7 @@ const AIAdvisor = ({ projects }) => {
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-bold text-indigo-900 flex items-center gap-2">
           <BrainCircuit className="w-6 h-6 text-indigo-600" />
-          المستشار الذكي للمكتب الهندسي
+          روبوت التحليل الذكي
         </h3>
         <button 
           onClick={analyzeProjects}
@@ -222,7 +249,7 @@ const AIAdvisor = ({ projects }) => {
           className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center gap-2 text-sm transition-colors disabled:opacity-50"
         >
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <BrainCircuit className="w-4 h-4" />}
-          {analysis ? 'تحديث التحليل' : 'تحليل محفظة المشاريع'}
+          {analysis ? 'تحديث التحليل المالي' : 'تحليل المخاطر والوضع المالي'}
         </button>
       </div>
 
@@ -243,18 +270,22 @@ const ProjectForm = ({ onClose, initialData, onSave }) => {
     name: '',
     serviceType: 'design',
     price: '',
+    collectedAmount: '', 
     status: 'جديد',
+    executionStatus: 'ongoing', 
     location: '',
     projectSource: '',
     submissionStage: '',
+    contractStartDate: '', 
+    contractEndDate: '', 
     followUpEngineer: '',
     designEngineer: '',
     ownerName: '',
     ownerPhone: '',
     ownerEmail: '',
     notes: '',
-    lastUpdateDate: new Date().toISOString().split('T')[0], // Default to today
-    lastUpdateNote: '' // Note for the update
+    lastUpdateDate: new Date().toISOString().split('T')[0],
+    lastUpdateNote: ''
   });
 
   useEffect(() => {
@@ -262,7 +293,11 @@ const ProjectForm = ({ onClose, initialData, onSave }) => {
       ...formData,
       ...initialData,
       lastUpdateDate: initialData.lastUpdateDate || new Date().toISOString().split('T')[0],
-      lastUpdateNote: initialData.lastUpdateNote || ''
+      lastUpdateNote: initialData.lastUpdateNote || '',
+      collectedAmount: initialData.collectedAmount || '',
+      contractStartDate: initialData.contractStartDate || '',
+      contractEndDate: initialData.contractEndDate || '',
+      executionStatus: initialData.executionStatus || 'ongoing'
     });
   }, [initialData]);
 
@@ -273,215 +308,153 @@ const ProjectForm = ({ onClose, initialData, onSave }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
         <div className="p-4 border-b bg-gray-50 flex justify-between items-center sticky top-0">
           <h2 className="font-bold text-lg text-gray-800">
-            {initialData ? 'تعديل بيانات المشروع' : 'إضافة مشروع هندسي جديد'}
+            {initialData ? 'تعديل بيانات المشروع' : 'إضافة مشروع جديد'}
           </h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition">
             <X className="w-5 h-5 text-gray-500" />
           </button>
         </div>
         
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4">
-          {/* Basic Info */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">اسم المشروع</label>
-            <input 
-              required
-              type="text" 
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-              placeholder="مثال: تصميم فيلا سكنية..."
-              value={formData.name}
-              onChange={e => setFormData({...formData, name: e.target.value})}
-            />
+        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6">
+          {/* القسم 1: المعلومات الأساسية */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold text-blue-800 border-b border-blue-100 pb-2">المعلومات الأساسية</h3>
+            <div className="grid grid-cols-1 gap-4">
+               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">اسم المشروع</label>
+                <input required type="text" className="w-full p-2 border rounded-md outline-none focus:border-blue-500"
+                  value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">جهة المشروع</label>
+                  <select className="w-full p-2 border rounded-md outline-none bg-white"
+                    value={formData.projectSource} onChange={e => setFormData({...formData, projectSource: e.target.value})}>
+                    <option value="">اختر الجهة...</option>
+                    {PROJECT_SOURCES.map(src => <option key={src} value={src}>{src}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">المدينة</label>
+                  <select className="w-full p-2 border rounded-md outline-none bg-white"
+                    value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})}>
+                    <option value="">اختر الموقع...</option>
+                    {SAUDI_LOCATIONS.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+                  </select>
+                </div>
+                <div>
+                   <label className="block text-sm font-medium text-gray-700 mb-1">نوع الخدمة</label>
+                   <select className="w-full p-2 border rounded-md outline-none bg-white"
+                    value={formData.serviceType} onChange={e => setFormData({...formData, serviceType: e.target.value})}>
+                    {SERVICE_TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
           </div>
 
+          {/* القسم 2: الحالة والتنفيذ */}
+          <div className="space-y-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <h3 className="text-sm font-bold text-gray-800 border-b border-gray-200 pb-2 flex items-center gap-2">
+              <Activity className="w-4 h-4" />
+              حالة المشروع والتنفيذ
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">الحالة التنفيذية (للفلترة)</label>
+                <select className="w-full p-2 border rounded-md outline-none bg-white font-semibold text-gray-700"
+                  value={formData.executionStatus} onChange={e => setFormData({...formData, executionStatus: e.target.value})}>
+                  {EXECUTION_STATUS_OPTIONS.map(st => <option key={st.id} value={st.id}>{st.label}</option>)}
+                </select>
+              </div>
+              <div>
+                 <label className="block text-sm font-medium text-gray-700 mb-1">مرحلة التقديم (للمناقصات)</label>
+                 <select className="w-full p-2 border rounded-md outline-none bg-white"
+                  value={formData.submissionStage} onChange={e => setFormData({...formData, submissionStage: e.target.value})}>
+                  <option value="">اختر المرحلة...</option>
+                  {SUBMISSION_STAGES.map(st => <option key={st} value={st}>{st}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">الحالة العامة</label>
+                <select className="w-full p-2 border rounded-md outline-none bg-white"
+                  value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})}>
+                  {STATUS_OPTIONS.map(st => <option key={st} value={st}>{st}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* القسم 3: البيانات المالية والعقود */}
+          <div className="space-y-4 bg-green-50 p-4 rounded-lg border border-green-100">
+             <h3 className="text-sm font-bold text-green-900 border-b border-green-200 pb-2 flex items-center gap-2">
+              <Banknote className="w-4 h-4" />
+              البيانات المالية والزمنية للعقد
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">قيمة العقد الإجمالية (ر.س)</label>
+                <input type="number" className="w-full p-2 border rounded-md outline-none focus:border-green-500"
+                  placeholder="0.00" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">المبلغ المحصل حتى الآن (ر.س)</label>
+                <input type="number" className="w-full p-2 border rounded-md outline-none focus:border-green-500"
+                  placeholder="0.00" value={formData.collectedAmount} onChange={e => setFormData({...formData, collectedAmount: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">تاريخ بداية العقد</label>
+                <input type="date" className="w-full p-2 border rounded-md outline-none bg-white"
+                  value={formData.contractStartDate} onChange={e => setFormData({...formData, contractStartDate: e.target.value})} />
+              </div>
+               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">تاريخ نهاية العقد</label>
+                <input type="date" className="w-full p-2 border rounded-md outline-none bg-white"
+                  value={formData.contractEndDate} onChange={e => setFormData({...formData, contractEndDate: e.target.value})} />
+              </div>
+            </div>
+          </div>
+
+          {/* القسم 4: التحديثات والمهندسين */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">جهة المشروع</label>
-              <select 
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-                value={formData.projectSource}
-                onChange={e => setFormData({...formData, projectSource: e.target.value})}
-              >
-                <option value="">اختر الجهة...</option>
-                {PROJECT_SOURCES.map(src => (
-                  <option key={src} value={src}>{src}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">مرحلة التقديم</label>
-              <select 
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-                value={formData.submissionStage}
-                onChange={e => setFormData({...formData, submissionStage: e.target.value})}
-              >
-                <option value="">اختر المرحلة...</option>
-                {SUBMISSION_STAGES.map(stage => (
-                  <option key={stage} value={stage}>{stage}</option>
-                ))}
-              </select>
-            </div>
+             <div className="bg-amber-50 p-4 rounded-lg border border-amber-100">
+                <h4 className="text-sm font-bold text-amber-900 mb-2 flex items-center gap-2"><History className="w-4 h-4"/> آخر تحديث</h4>
+                <div className="space-y-2">
+                   <input type="date" className="w-full p-2 border rounded-md text-sm bg-white"
+                    value={formData.lastUpdateDate} onChange={e => setFormData({...formData, lastUpdateDate: e.target.value})} />
+                   <textarea className="w-full p-2 border rounded-md text-sm h-20 bg-white resize-none"
+                    placeholder="ملاحظات التحديث..." value={formData.lastUpdateNote} onChange={e => setFormData({...formData, lastUpdateNote: e.target.value})} />
+                </div>
+             </div>
+             <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                <h4 className="text-sm font-bold text-blue-900 mb-2 flex items-center gap-2"><UserCog className="w-4 h-4"/> الفريق</h4>
+                <div className="space-y-2">
+                   <input type="text" placeholder="مهندس المتابعة" className="w-full p-2 border rounded-md text-sm bg-white"
+                    value={formData.followUpEngineer} onChange={e => setFormData({...formData, followUpEngineer: e.target.value})} />
+                   <input type="text" placeholder="مهندس التصميم/الإدارة" className="w-full p-2 border rounded-md text-sm bg-white"
+                    value={formData.designEngineer} onChange={e => setFormData({...formData, designEngineer: e.target.value})} />
+                </div>
+             </div>
           </div>
 
-          {/* Update Status Section */}
-          <div className="bg-amber-50 p-4 rounded-lg border border-amber-100 space-y-3">
-            <h4 className="text-sm font-semibold text-amber-900 flex items-center gap-2">
-              <History className="w-4 h-4" />
-              آخر تحديث للمشروع
-            </h4>
-            <div className="grid grid-cols-1 gap-3">
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">تاريخ التحديث</label>
-                <input 
-                  type="date"
-                  className="w-full p-2 border border-amber-200 rounded-md text-sm focus:border-amber-500 outline-none bg-white"
-                  value={formData.lastUpdateDate}
-                  onChange={e => setFormData({...formData, lastUpdateDate: e.target.value})}
-                />
+          {/* القسم 5: العميل والملاحظات */}
+           <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                 <input type="text" placeholder="اسم العميل" className="w-full p-2 border rounded-md text-sm"
+                  value={formData.ownerName} onChange={e => setFormData({...formData, ownerName: e.target.value})} />
+                 <input type="text" placeholder="رقم الجوال" className="w-full p-2 border rounded-md text-sm"
+                  value={formData.ownerPhone} onChange={e => setFormData({...formData, ownerPhone: e.target.value})} />
+                 <input type="text" placeholder="البريد الإلكتروني" className="w-full p-2 border rounded-md text-sm"
+                  value={formData.ownerEmail} onChange={e => setFormData({...formData, ownerEmail: e.target.value})} />
               </div>
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">ملاحظات التحديث الأخير</label>
-                <textarea 
-                  className="w-full p-2 border border-amber-200 rounded-md text-sm focus:border-amber-500 outline-none h-16 resize-none bg-white"
-                  placeholder="مثال: تم التواصل مع العميل وطلب مهلة للتفكير..."
-                  value={formData.lastUpdateNote}
-                  onChange={e => setFormData({...formData, lastUpdateNote: e.target.value})}
-                />
-              </div>
-            </div>
-          </div>
+              <textarea className="w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 h-20 resize-none"
+                placeholder="ملاحظات عامة إضافية..." value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})}></textarea>
+           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">نوع الخدمة</label>
-              <select 
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-                value={formData.serviceType}
-                onChange={e => setFormData({...formData, serviceType: e.target.value})}
-              >
-                {SERVICE_TYPES.map(type => (
-                  <option key={type.id} value={type.id}>{type.label}</option>
-                ))}
-              </select>
-            </div>
-             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">المدينة</label>
-              <select 
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-                value={formData.location}
-                onChange={e => setFormData({...formData, location: e.target.value})}
-              >
-                <option value="">اختر الموقع...</option>
-                {SAUDI_LOCATIONS.map(loc => (
-                  <option key={loc} value={loc}>{loc}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">القيمة (ر.س)</label>
-              <input 
-                type="number" 
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="0.00"
-                value={formData.price}
-                onChange={e => setFormData({...formData, price: e.target.value})}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">الحالة العامة</label>
-              <select 
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-                value={formData.status}
-                onChange={e => setFormData({...formData, status: e.target.value})}
-              >
-                {STATUS_OPTIONS.map(status => (
-                  <option key={status} value={status}>{status}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Engineers */}
-          <div className="bg-blue-50 p-4 rounded-lg space-y-3 border border-blue-100">
-            <h4 className="text-sm font-semibold text-blue-900 flex items-center gap-2">
-              <UserCog className="w-4 h-4" />
-              فريق العمل
-            </h4>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">مهندس المتابعة</label>
-                <input 
-                  type="text" 
-                  className="w-full p-2 border border-blue-200 rounded-md text-sm focus:border-blue-500 outline-none"
-                  value={formData.followUpEngineer}
-                  onChange={e => setFormData({...formData, followUpEngineer: e.target.value})}
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">مهندس التصميم/الإدارة</label>
-                <input 
-                  type="text" 
-                  className="w-full p-2 border border-blue-200 rounded-md text-sm focus:border-blue-500 outline-none"
-                  value={formData.designEngineer}
-                  onChange={e => setFormData({...formData, designEngineer: e.target.value})}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Owner Details */}
-          <div className="bg-gray-50 p-4 rounded-lg space-y-3 border border-gray-100">
-            <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-              <User className="w-4 h-4" />
-              بيانات العميل
-            </h4>
-            <div className="grid grid-cols-1 gap-3">
-              <input 
-                type="text" 
-                className="w-full p-2 border border-gray-300 rounded-md text-sm"
-                placeholder="الاسم"
-                value={formData.ownerName}
-                onChange={e => setFormData({...formData, ownerName: e.target.value})}
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <input 
-                  type="text" 
-                  className="w-full p-2 border border-gray-300 rounded-md text-sm"
-                  placeholder="الجوال"
-                  value={formData.ownerPhone}
-                  onChange={e => setFormData({...formData, ownerPhone: e.target.value})}
-                />
-                <input 
-                  type="email" 
-                  className="w-full p-2 border border-gray-300 rounded-md text-sm"
-                  placeholder="الايميل"
-                  value={formData.ownerEmail}
-                  onChange={e => setFormData({...formData, ownerEmail: e.target.value})}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">ملاحظات عامة</label>
-            <textarea 
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-20 resize-none"
-              placeholder="ملاحظات إضافية..."
-              value={formData.notes}
-              onChange={e => setFormData({...formData, notes: e.target.value})}
-            ></textarea>
-          </div>
-
-          <button 
-            type="submit"
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-lg shadow-blue-200 transition transform active:scale-[0.98]"
-          >
+          <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-lg transition active:scale-[0.98]">
             حفظ التغييرات
           </button>
         </form>
@@ -503,10 +476,11 @@ const ProjectCard = ({ project, onEdit, onDelete }) => {
 
   const serviceTypeInfo = SERVICE_TYPES.find(t => t.id === project.serviceType) || SERVICE_TYPES[5]; 
   const ServiceIcon = serviceTypeInfo.icon;
+  const executionInfo = EXECUTION_STATUS_OPTIONS.find(t => t.id === project.executionStatus) || EXECUTION_STATUS_OPTIONS[0];
 
-  const isNewOrBidding = ['جديد', 'بانتظار الموافقة', 'تم التقديم', 'تحت المراجعة'].includes(project.status) || project.submissionStage;
-  const activeEngineer = (isNewOrBidding && project.followUpEngineer) ? project.followUpEngineer : project.designEngineer;
-  const engineerLabel = (isNewOrBidding && project.followUpEngineer) ? 'متابعة:' : 'تصميم/إشراف:';
+  const totalPrice = Number(project.price) || 0;
+  const collected = Number(project.collectedAmount) || 0;
+  const collectionPercentage = totalPrice > 0 ? Math.min(100, Math.round((collected / totalPrice) * 100)) : 0;
 
   const getStageColor = (stage) => {
     if (stage === 'تمت الترسية') return 'text-green-700 bg-green-50 border-green-100';
@@ -515,131 +489,151 @@ const ProjectCard = ({ project, onEdit, onDelete }) => {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow p-5 group relative flex flex-col h-full">
-      {/* Header */}
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow p-4 group relative flex flex-col h-full">
+      {/* Top: Status */}
       <div className="flex justify-between items-start mb-3">
-        <div>
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-            project.status === 'مكتمل' ? 'bg-green-100 text-green-800' :
-            project.submissionStage ? 'bg-amber-100 text-amber-800' :
-            'bg-blue-100 text-blue-800'
-          }`}>
-            {project.status}
+        <div className="flex gap-2 flex-wrap">
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold border ${executionInfo.color}`}>
+            {executionInfo.label}
           </span>
-        </div>
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button onClick={() => onEdit(project)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md">
-            <Edit2 className="w-4 h-4" />
-          </button>
-          <button onClick={() => onDelete(project.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md">
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* Tags Row */}
-      <div className="flex flex-wrap gap-2 mb-3">
-        <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 bg-gray-50 px-2 py-1 rounded border border-gray-100">
-          <ServiceIcon className="w-3 h-3" />
-          {serviceTypeInfo.label}
-        </span>
-        {project.location && (
-          <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded border border-gray-100">
-            <MapPin className="w-3 h-3" />
-            {project.location}
-          </span>
-        )}
-         {project.projectSource && (
-          <span className="inline-flex items-center gap-1 text-xs font-medium text-purple-600 bg-purple-50 px-2 py-1 rounded border border-purple-100">
-            <Landmark className="w-3 h-3" />
-            {project.projectSource === 'مشروع مناقصة حكومية' ? 'حكومي' : 
-             project.projectSource === 'مشروع من منصة اعتماد' ? 'اعتماد' : 
-             project.projectSource === 'مشروع خاص' ? 'خاص' : project.projectSource}
-          </span>
-        )}
-      </div>
-
-      {/* Title & Price */}
-      <h3 className="font-bold text-gray-900 text-lg mb-1 line-clamp-2 leading-tight" title={project.name}>{project.name}</h3>
-      {project.price && (
-        <div className="flex items-center gap-1 text-gray-600 mb-2 font-medium text-sm mt-1">
-          <DollarSign className="w-4 h-4 text-gray-400" />
-          {Number(project.price).toLocaleString()} ر.س
-        </div>
-      )}
-
-      {/* Submission Stage */}
-      {project.submissionStage && (
-        <div className={`mb-3 flex items-start gap-2 text-xs px-3 py-2 rounded-lg border ${getStageColor(project.submissionStage)}`}>
-          <Gavel className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-          <span className="font-medium">{project.submissionStage}</span>
-        </div>
-      )}
-
-      {/* Last Update Section */}
-      {(project.lastUpdateDate || project.lastUpdateNote) && (
-        <div className="mb-3 bg-amber-50/50 border border-amber-100 rounded-lg p-2.5">
-          <div className="flex items-center gap-1.5 mb-1 text-xs text-amber-800 font-semibold">
-            <History className="w-3 h-3" />
-            <span>آخر تحديث: {project.lastUpdateDate}</span>
-          </div>
-          {project.lastUpdateNote && (
-            <p className="text-xs text-gray-600 leading-relaxed">{project.lastUpdateNote}</p>
+          {project.status !== 'جديد' && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs bg-gray-100 text-gray-600 border border-gray-200">
+               {project.status}
+            </span>
+          )}
+           {project.status === 'جديد' && (
+            <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-md text-xs font-medium">جديد</span>
           )}
         </div>
-      )}
+        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button onClick={() => onEdit(project)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md"><Edit2 className="w-4 h-4" /></button>
+          <button onClick={() => onDelete(project.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md"><Trash2 className="w-4 h-4" /></button>
+        </div>
+      </div>
 
-      {/* Active Engineer */}
-      {activeEngineer && (
-        <div className="mb-3 flex items-center gap-2 text-sm bg-blue-50 text-blue-800 px-3 py-2 rounded-lg border border-blue-100">
-          <UserCog className="w-4 h-4 flex-shrink-0" />
-          <span className="text-xs text-blue-500 font-normal ml-1">{engineerLabel}</span>
-          <span className="font-semibold truncate">{activeEngineer}</span>
+      {/* Meta Data Grid */}
+      <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
+         <div className="flex items-center gap-1 text-gray-600" title="نوع الخدمة">
+            <ServiceIcon className="w-3.5 h-3.5 text-gray-400" />
+            <span className="truncate">{serviceTypeInfo.label}</span>
+         </div>
+         <div className="flex items-center gap-1 text-gray-600" title="المدينة">
+            <MapPin className="w-3.5 h-3.5 text-gray-400" />
+            <span className="truncate">{project.location || 'غير محدد'}</span>
+         </div>
+         <div className="col-span-2 flex items-center gap-1 text-gray-600" title="المصدر">
+            <Landmark className="w-3.5 h-3.5 text-gray-400" />
+            <span className="truncate">
+               {project.projectSource === 'مشروع مناقصة حكومية' ? 'حكومي' : 
+                project.projectSource === 'مشروع من منصة اعتماد' ? 'اعتماد' : 
+                project.projectSource === 'مشروع خاص' ? 'خاص' : 
+                project.projectSource || 'غير محدد'}
+            </span>
+         </div>
+      </div>
+
+      {/* Title */}
+      <h3 className="font-bold text-gray-900 text-base mb-3 line-clamp-2 leading-tight min-h-[2.5rem]" title={project.name}>{project.name}</h3>
+
+      {/* Submission Stage if available */}
+      {project.submissionStage && (
+        <div className={`mb-3 flex items-start gap-2 text-xs px-2 py-1.5 rounded border ${getStageColor(project.submissionStage)}`}>
+          <Gavel className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+          <span className="font-medium truncate">{project.submissionStage}</span>
         </div>
       )}
 
-      {/* Contact Details & General Notes */}
-      <div className="mt-auto pt-4 border-t border-gray-50 space-y-2">
-        {(project.ownerName || project.ownerPhone || project.ownerEmail) ? (
-          <div className="bg-gray-50 p-2.5 rounded-lg space-y-1.5">
-            {project.ownerName && (
-              <div className="flex items-center gap-2 text-sm text-gray-700 font-medium">
-                <User className="w-3.5 h-3.5 text-gray-400" />
-                <span className="truncate">{project.ownerName}</span>
-              </div>
-            )}
-            
-            {project.ownerPhone && (
-              <div className="flex items-center gap-2 text-xs text-gray-600">
-                <Phone className="w-3.5 h-3.5 text-gray-400" />
-                <span className="font-mono">{project.ownerPhone}</span>
-                <button 
-                  onClick={() => copyToClipboard(project.ownerPhone)} 
-                  className="text-blue-500 hover:text-blue-700 ml-auto"
-                  title="نسخ"
-                >
-                  <Copy className="w-3 h-3" />
-                </button>
-              </div>
-            )}
-
-            {project.ownerEmail && (
-              <div className="flex items-center gap-2 text-xs text-gray-600">
-                <Mail className="w-3.5 h-3.5 text-gray-400" />
-                <span className="truncate font-mono" title={project.ownerEmail}>{project.ownerEmail}</span>
-              </div>
-            )}
+      {/* Financials */}
+      {totalPrice > 0 && (
+        <div className="mb-4 bg-gray-50 p-2 rounded-lg border border-gray-100">
+          <div className="flex justify-between text-xs mb-1 font-medium">
+            <span className="text-gray-500">العقد: {totalPrice.toLocaleString()}</span>
+            <span className={collectionPercentage === 100 ? "text-green-600" : "text-blue-600"}>
+              {collectionPercentage}%
+            </span>
           </div>
-        ) : null}
-
-        {/* General Notes Display */}
-        {project.notes && (
-          <div className="flex items-start gap-2 text-xs text-gray-500 bg-gray-50/50 p-2 rounded">
-            <FileText className="w-3.5 h-3.5 mt-0.5 text-gray-400 shrink-0" />
-            <p className="line-clamp-2">{project.notes}</p>
+          <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden mb-1">
+            <div 
+              className={`h-1.5 rounded-full ${collectionPercentage >= 100 ? 'bg-green-500' : collectionPercentage > 50 ? 'bg-blue-500' : 'bg-amber-500'}`} 
+              style={{ width: `${collectionPercentage}%` }}
+            ></div>
           </div>
-        )}
+          <div className="text-[10px] text-gray-400 text-left">تم تحصيل: {collected.toLocaleString()}</div>
+        </div>
+      )}
+
+      {/* Dates */}
+      {(project.contractStartDate || project.contractEndDate) && (
+        <div className="flex justify-between text-xs text-gray-500 bg-gray-50 p-2 rounded-lg border border-gray-100 mb-3">
+           <div><span className="text-gray-400 block text-[10px]">البداية</span>{project.contractStartDate || '-'}</div>
+           <div className="text-left"><span className="text-gray-400 block text-[10px]">النهاية</span>
+             <span className={new Date(project.contractEndDate) < new Date() ? 'text-red-600 font-bold' : ''}>{project.contractEndDate || '-'}</span>
+           </div>
+        </div>
+      )}
+
+      {/* Team */}
+      {(project.followUpEngineer || project.designEngineer) && (
+         <div className="mb-3 flex items-center gap-2 text-xs bg-blue-50 text-blue-800 px-2 py-1.5 rounded border border-blue-100">
+            <UserCog className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="truncate font-medium">{project.followUpEngineer || project.designEngineer}</span>
+         </div>
+      )}
+
+      {/* Client Details (Full) */}
+      {(project.ownerName || project.ownerPhone || project.ownerEmail) && (
+        <div className="mb-3 border-t border-gray-100 pt-2">
+           <p className="text-[10px] text-gray-400 mb-1 font-medium">بيانات المالك</p>
+           <div className="space-y-1">
+              {project.ownerName && (
+                 <div className="flex items-center gap-1.5 text-sm font-semibold text-gray-800">
+                    <User className="w-3.5 h-3.5 text-gray-400" />
+                    <span className="truncate">{project.ownerName}</span>
+                 </div>
+              )}
+              {project.ownerPhone && (
+                 <div className="flex items-center justify-between text-xs text-gray-600 group/phone">
+                    <div className="flex items-center gap-1.5">
+                       <Phone className="w-3 h-3 text-gray-400" />
+                       <span className="font-mono dir-ltr">{project.ownerPhone}</span>
+                    </div>
+                    <button onClick={() => copyToClipboard(project.ownerPhone)} className="text-blue-500 opacity-0 group-hover/phone:opacity-100 px-1">نسخ</button>
+                 </div>
+              )}
+              {project.ownerEmail && (
+                 <div className="flex items-center justify-between text-xs text-gray-600 group/email">
+                    <div className="flex items-center gap-1.5 overflow-hidden">
+                       <Mail className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                       <span className="truncate font-mono">{project.ownerEmail}</span>
+                    </div>
+                    <button onClick={() => copyToClipboard(project.ownerEmail)} className="text-blue-500 opacity-0 group-hover/email:opacity-100 px-1">نسخ</button>
+                 </div>
+              )}
+           </div>
+        </div>
+      )}
+
+      {/* Notes & Update */}
+      <div className="mt-auto pt-2 border-t border-gray-50 space-y-2">
+         {/* Last Update */}
+         {(project.lastUpdateDate || project.lastUpdateNote) && (
+            <div className="bg-amber-50 border border-amber-100 rounded p-2">
+               <div className="flex items-center gap-1 mb-1 text-[10px] text-amber-800 font-bold">
+                  <History className="w-3 h-3" />
+                  <span>تحديث: {project.lastUpdateDate}</span>
+               </div>
+               {project.lastUpdateNote && <p className="text-[10px] text-gray-600 leading-relaxed">{project.lastUpdateNote}</p>}
+            </div>
+         )}
+         {/* General Notes */}
+         {project.notes && (
+            <div className="flex items-start gap-1.5 text-[10px] text-gray-500 bg-gray-50 p-1.5 rounded border border-gray-100">
+               <FileText className="w-3 h-3 mt-0.5 text-gray-400 shrink-0" />
+               <p className="line-clamp-2">{project.notes}</p>
+            </div>
+         )}
       </div>
+
     </div>
   );
 };
@@ -654,7 +648,6 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // --- Auth & Data Fetching ---
   useEffect(() => {
     const initAuth = async () => {
       if (USE_CUSTOM_DB) {
@@ -679,7 +672,6 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
 
-    // استخدام الدالة المساعدة لجلب المسار الصحيح
     const projectsRef = getProjectsCollection();
     
     const unsubscribeDocs = onSnapshot(projectsRef, 
@@ -698,17 +690,14 @@ export default function App() {
     return () => unsubscribeDocs();
   }, [user]);
 
-  // --- Actions ---
   const handleSave = async (data) => {
     if (!user) return;
     
     try {
       if (editingProject) {
-        // استخدام الدالة المساعدة للمسار
         const docRef = getProjectDoc(editingProject.id);
         await updateDoc(docRef, { ...data });
       } else {
-        // استخدام الدالة المساعدة للمجموعة
         const collectionRef = getProjectsCollection();
         await addDoc(collectionRef, {
           ...data,
@@ -740,7 +729,6 @@ export default function App() {
     setIsFormOpen(true);
   };
 
-  // --- Dynamic Filter Logic ---
   const filteredProjects = projects.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           p.ownerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -782,7 +770,7 @@ export default function App() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50" dir="rtl">
         <div className="text-center">
           <Loader2 className="w-10 h-10 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-500">جاري تحميل المشاريع - مرحبا بك في CMDEC...</p>
+          <p className="text-gray-500">جاري تحميل المشاريع... - مرحبا بك في CMDEC</p>
         </div>
       </div>
     );
@@ -802,7 +790,7 @@ export default function App() {
               </div>
               <div>
                 <h1 className="text-xl font-extrabold text-gray-900">لوحة تحكم المشاريع</h1>
-                <p className="text-xs text-gray-500">منظومة متابعة التصاميم والإشراف</p>
+                <p className="text-xs text-gray-500">قاعدة بيانات المشاريع للمكتب الهندسي CMDEC</p>
               </div>
             </div>
 
@@ -812,7 +800,7 @@ export default function App() {
                <img 
                  src="download (1).jpg" 
                  alt="CMDEC Logo" 
-                 className="h-20 object-contain" 
+                 className="h-20 object-contain" // ارتفاع مناسب للشعار
                  onError={(e) => {
                    e.target.style.display = 'none';
                  }}
@@ -928,6 +916,15 @@ export default function App() {
           onSave={handleSave}
         />
       )}
+      
+      {/* Footer Indicator for DB Connection */}
+      <div className="fixed bottom-4 left-4 bg-white/90 backdrop-blur border border-gray-200 px-3 py-1.5 rounded-full text-[10px] text-gray-500 flex items-center gap-2 shadow-sm z-50">
+        <div className={`w-2 h-2 rounded-full ${USE_CUSTOM_DB ? 'bg-green-500' : 'bg-amber-500'}`}></div>
+        <span className="font-medium">
+          {USE_CUSTOM_DB ? 'متصل بقاعدة بيانات خاصة' : 'وضع التجربة (Demo DB)'}
+        </span>
+        {USE_CUSTOM_DB ? <Database className="w-3 h-3 text-green-600" /> : <Wifi className="w-3 h-3 text-amber-600" />}
+      </div>
     </div>
   );
 }
