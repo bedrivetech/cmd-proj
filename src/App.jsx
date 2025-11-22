@@ -29,7 +29,10 @@ import {
   AlertTriangle,
   PlayCircle,
   Database,
-  Wifi
+  Wifi,
+  Calendar,
+  Lock,
+  LogIn
 } from 'lucide-react';
 
 // --- Firebase Imports ---
@@ -55,14 +58,6 @@ import {
 // ⚙️ إعدادات قاعدة البيانات (FIREBASE CONFIGURATION)
 // ==========================================================================
 
-/**
- * 🔴 تعليمات إضافة قاعدة البيانات الخاصة بك:
- * 1. اذهب إلى Firebase Console > Project Settings.
- * 2. انسخ كائن `firebaseConfig`.
- * 3. الصقه مكان `null` في المتغير أدناه.
- * * ملاحظة: تأكد من تفعيل "Anonymous Auth" و "Firestore Database" في لوحة تحكم Firebase.
- */
-
 const YOUR_FIREBASE_CONFIG = {
   apiKey: "AIzaSyDSvi9dNBsXIjgv3yE2TZzBslk8QgYuv50",
   authDomain: "cmdec-project.firebaseapp.com",
@@ -72,55 +67,43 @@ const YOUR_FIREBASE_CONFIG = {
   appId: "1:624320915226:web:0a317d1aa4e2c052006ea3"
 };
 
-// --- التهيئة الذكية (Smart Initialization) ---
-// نستخدم إعداداتك إذا وجدت، وإلا نستخدم البيئة التجريبية
 const envConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
 const firebaseConfig = YOUR_FIREBASE_CONFIG || envConfig;
 
-// تهيئة Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// متغيرات التحكم في المسارات
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const USE_CUSTOM_DB = !!YOUR_FIREBASE_CONFIG; // هل نستخدم قاعدة بيانات خاصة؟
+const USE_CUSTOM_DB = !!YOUR_FIREBASE_CONFIG;
 
-// --- المسارات الذكية (Smart Path Selectors) ---
-// هذه الدوال تختار المسار الأسرع والأنسب بناءً على نوع الاتصال
-
-// 1. الحصول على مسار المجموعة (لتغذية البيانات وقراءتها)
 const getProjectsCollection = () => {
-  if (USE_CUSTOM_DB) {
-    // مسار مباشر وسريع في قاعدتك الخاصة
-    return collection(db, 'projects');
-  }
-  // مسار البيئة التجريبية المعزولة
+  if (USE_CUSTOM_DB) return collection(db, 'projects');
   return collection(db, 'artifacts', appId, 'public', 'data', 'projects');
 };
 
-// 2. الحصول على مسار المستند (للتعديل والحذف)
 const getProjectDoc = (id) => {
-  if (USE_CUSTOM_DB) {
-    return doc(db, 'projects', id);
-  }
+  if (USE_CUSTOM_DB) return doc(db, 'projects', id);
   return doc(db, 'artifacts', appId, 'public', 'data', 'projects', id);
 };
 
 // ==========================================================================
+// الثوابت والقوائم (DEFINITIONS)
+// ==========================================================================
 
-// --- AI Configuration ---
 const apiKey = "AIzaSyDRVla9f593dBhdLLSZhhv1v7V7DeejUuE"; 
 const AI_MODEL_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
-// --- Constants ---
+// 🔐 إعدادات الدخول (LOGIN CREDENTIALS)
+const APP_USERNAME = "cmdec";
+const APP_PASSWORD = "cmdec";
 
 const FILTERS = [
   { id: 'all', label: 'الكل', icon: LayoutDashboard },
-  { id: 'ongoing', label: 'مشاريع مستمرة', icon: PlayCircle, color: 'text-green-600', bg: 'bg-green-50' },
-  { id: 'under_study', label: 'تحت الدراسة', icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50' },
+  { id: 'ongoing', label: 'مشاريع مستمرة', icon: PlayCircle, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+  { id: 'under_study', label: 'تحت الدراسة', icon: FileText, color: 'text-sky-600', bg: 'bg-sky-50' },
   { id: 'stalled', label: 'مشاريع متعثرة', icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50' },
-  { id: 'financially_halted', label: 'متوقفة مالياً', icon: Banknote, color: 'text-amber-600', bg: 'bg-amber-50' },
+  { id: 'financially_halted', label: 'متوقفة مالياً', icon: Banknote, color: 'text-rose-600', bg: 'bg-rose-50' },
   { id: 'source_private', label: 'قطاع خاص', icon: Briefcase },
   { id: 'source_etimad', label: 'منصة اعتماد', icon: Landmark },
   { id: 'source_modon', label: 'منصة مدن', icon: Building2 },
@@ -129,12 +112,30 @@ const FILTERS = [
 ];
 
 const EXECUTION_STATUS_OPTIONS = [
-  { id: 'ongoing', label: 'مستمر', color: 'text-green-700 bg-green-50 border-green-200' },
+  { id: 'ongoing', label: 'مستمر', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
   { id: 'stalled', label: 'متعثر', color: 'text-red-700 bg-red-50 border-red-200' },
-  { id: 'financially_halted', label: 'متوقف مالياً', color: 'text-amber-700 bg-amber-50 border-amber-200' },
-  { id: 'under_study', label: 'تحت الدراسة', color: 'text-blue-700 bg-blue-50 border-blue-200' },
-  { id: 'completed', label: 'مكتمل', color: 'text-gray-700 bg-gray-50 border-gray-200' },
+  { id: 'financially_halted', label: 'متوقف مالياً', color: 'text-rose-700 bg-rose-50 border-rose-200' },
+  { id: 'under_study', label: 'تحت الدراسة', color: 'text-sky-700 bg-sky-50 border-sky-200' },
+  { id: 'completed', label: 'مكتمل', color: 'text-slate-700 bg-slate-50 border-slate-200' },
 ];
+
+const PROJECT_SOURCE_COLORS = {
+  'مشروع خاص': 'text-indigo-700 bg-indigo-50 border-indigo-200',
+  'مشروع من منصة اعتماد': 'text-teal-700 bg-teal-50 border-teal-200',
+  'مشروع من منصة مدن': 'text-cyan-700 bg-cyan-50 border-cyan-200',
+  'مشروع مناقصة حكومية': 'text-emerald-700 bg-emerald-50 border-emerald-200',
+  'مشاريع الهيئات الملكية': 'text-purple-700 bg-purple-50 border-purple-200',
+};
+
+const STATUS_COLORS = {
+  'جديد': 'text-blue-700 bg-blue-50 border-blue-200',
+  'جاري التصميم': 'text-indigo-700 bg-indigo-50 border-indigo-200',
+  'جاري الإشراف': 'text-violet-700 bg-violet-50 border-violet-200',
+  'بانتظار الموافقة': 'text-amber-700 bg-amber-50 border-amber-200',
+  'مكتمل': 'text-emerald-700 bg-emerald-50 border-emerald-200',
+  'تم التقديم': 'text-cyan-700 bg-cyan-50 border-cyan-200',
+  'تحت المراجعة': 'text-orange-700 bg-orange-50 border-orange-200',
+};
 
 const PROJECT_SOURCES = [
   'مشروع خاص', 
@@ -145,7 +146,13 @@ const PROJECT_SOURCES = [
 ];
 
 const STATUS_OPTIONS = [
-  'جديد', 'جاري التصميم', 'جاري الإشراف', 'بانتظار الموافقة', 'مكتمل', 'تم التقديم', 'تحت المراجعة'
+  'جديد', 
+  'جاري التصميم', 
+  'جاري الإشراف', 
+  'بانتظار الموافقة', 
+  'مكتمل', 
+  'تم التقديم', 
+  'تحت المراجعة'
 ];
 
 const SUBMISSION_STAGES = [
@@ -162,7 +169,7 @@ const SERVICE_TYPES = [
   { id: 'design', label: 'تصميم', icon: Ruler },
   { id: 'supervision', label: 'إشراف', icon: HardHat },
   { id: 'design_supervision', label: 'تصميم وإشراف', icon: Activity },
-  { id: 'municipal', label: 'خدمات بلدية وتصاريح', icon: FileText },
+  { id: 'municipal', label: 'خدمات بلدية', icon: FileText },
   { id: 'safety', label: 'خدمات سلامة', icon: FileCheck },
   { id: 'other', label: 'أخرى', icon: Briefcase },
 ];
@@ -170,96 +177,81 @@ const SERVICE_TYPES = [
 const SAUDI_LOCATIONS = [
   'الرياض', 'جدة', 'مكة المكرمة', 'المدينة المنورة', 
   'الدمام', 'الخبر', 'الظهران', 'الاحساء', 'القطيف', 'الجبيل',
-  'القصيم', 'بريدة', 'رأس الخير', 
+  'القصيم', 'بريدة', 'عنيزة', 
   'أبها', 'خميس مشيط', 'جازان', 'نجران', 
-  'تبوك', 'حائل', 'عرعر', 'الجوف', 'نيوم', 
+  'تبوك', 'حائل', 'عرعر', 'الجوف', 'سكاكا', 
   'الباحة', 'الطائف', 'ينبع', 'بيشة', 'حفر الباطن'
 ];
 
 // --- Components ---
 
-// 1. AI Advisor Component
-const AIAdvisor = ({ projects }) => {
-  const [loading, setLoading] = useState(false);
-  const [analysis, setAnalysis] = useState(null);
-  const [error, setError] = useState(null);
+// 1. Login Screen
+const LoginScreen = ({ onLogin }) => {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
-  const analyzeProjects = async () => {
-    if (projects.length === 0) {
-      setAnalysis("لا توجد مشاريع حالياً للتحليل. أضف بعض المشاريع أولاً.");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    const prompt = `
-      بصفتك مستشار تخطيط مالي واستراتيجي لمكتب هندسي، قم بتحليل المشاريع التالية بدقة.
-      
-      قدم تقريراً مهنياً مختصراً باللغة العربية يركز على:
-      1. **الوضع المالي والتحصيل:** قارن المبالغ المحصلة بإجمالي العقود.
-      2. **تحليل الجدول الزمني:** حدد المشاريع التي تجاوزت تاريخ نهايتها.
-      3. **توزيع المخاطر:** حلل نسبة المشاريع المتعثرة.
-      4. **توصيات:** نصائح عاجلة.
-
-      بيانات المشاريع:
-      ${JSON.stringify(projects.map(p => ({
-        name: p.name,
-        executionStatus: p.executionStatus,
-        projectSource: p.projectSource,
-        contractEndDate: p.contractEndDate,
-        price: p.price,
-        collectedAmount: p.collectedAmount,
-        status: p.status
-      })))}
-    `;
-
-    try {
-      const response = await fetch(AI_MODEL_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }]
-        })
-      });
-
-      if (!response.ok) throw new Error('فشل الاتصال');
-
-      const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      setAnalysis(text);
-    } catch (err) {
-      console.error(err);
-      setError("حدث خطأ أثناء التحليل.");
-    } finally {
-      setLoading(false);
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (username === APP_USERNAME && password === APP_PASSWORD) {
+      onLogin();
+    } else {
+      setError('اسم المستخدم أو كلمة المرور غير صحيحة');
     }
   };
 
   return (
-    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-6 shadow-sm border border-indigo-100 mb-8">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-bold text-indigo-900 flex items-center gap-2">
-          <BrainCircuit className="w-6 h-6 text-indigo-600" />
-          روبوت التحليل الذكي
-        </h3>
-        <button 
-          onClick={analyzeProjects}
-          disabled={loading}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center gap-2 text-sm transition-colors disabled:opacity-50"
-        >
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <BrainCircuit className="w-4 h-4" />}
-          {analysis ? 'تحديث التحليل المالي' : 'تحليل المخاطر والوضع المالي'}
-        </button>
-      </div>
-
-      {error && <div className="text-red-600 bg-red-50 p-3 rounded-lg text-sm">{error}</div>}
-
-      {analysis && (
-        <div className="bg-white p-4 rounded-lg border border-indigo-100 text-gray-700 text-sm leading-relaxed whitespace-pre-line animate-in fade-in duration-500">
-          {analysis}
+    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4 font-sans" dir="rtl">
+      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-200">
+        <div className="flex justify-center mb-6">
+           <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center">
+             <Lock className="w-10 h-10 text-blue-600" />
+           </div>
         </div>
-      )}
+        <h2 className="text-2xl font-bold text-center text-gray-900 mb-2">تسجيل الدخول</h2>
+        <p className="text-gray-500 text-center mb-8 text-sm">إدارة المكتب الهندسي</p>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">اسم المستخدم</label>
+            <input 
+              type="text" 
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+              placeholder="أدخل اسم المستخدم"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">كلمة المرور</label>
+            <input 
+              type="password" 
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+              placeholder="أدخل كلمة المرور"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+          
+          {error && (
+            <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              {error}
+            </div>
+          )}
+
+          <button 
+            type="submit" 
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition shadow-lg flex items-center justify-center gap-2"
+          >
+            <LogIn className="w-5 h-5" />
+            دخول للنظام
+          </button>
+        </form>
+        <div className="mt-6 text-center text-xs text-gray-400">
+          CMDEC System v2.0
+        </div>
+      </div>
     </div>
   );
 };
@@ -319,7 +311,7 @@ const ProjectForm = ({ onClose, initialData, onSave }) => {
         </div>
         
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6">
-          {/* القسم 1: المعلومات الأساسية */}
+          {/* 1. Basic Info */}
           <div className="space-y-4">
             <h3 className="text-sm font-bold text-blue-800 border-b border-blue-100 pb-2">المعلومات الأساسية</h3>
             <div className="grid grid-cols-1 gap-4">
@@ -356,7 +348,7 @@ const ProjectForm = ({ onClose, initialData, onSave }) => {
             </div>
           </div>
 
-          {/* القسم 2: الحالة والتنفيذ */}
+          {/* 2. Status */}
           <div className="space-y-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
             <h3 className="text-sm font-bold text-gray-800 border-b border-gray-200 pb-2 flex items-center gap-2">
               <Activity className="w-4 h-4" />
@@ -388,11 +380,11 @@ const ProjectForm = ({ onClose, initialData, onSave }) => {
             </div>
           </div>
 
-          {/* القسم 3: البيانات المالية والعقود */}
+          {/* 3. Financials & Dates */}
           <div className="space-y-4 bg-green-50 p-4 rounded-lg border border-green-100">
              <h3 className="text-sm font-bold text-green-900 border-b border-green-200 pb-2 flex items-center gap-2">
               <Banknote className="w-4 h-4" />
-              البيانات المالية والزمنية للعقد
+              البيانات المالية والزمنية
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -401,7 +393,7 @@ const ProjectForm = ({ onClose, initialData, onSave }) => {
                   placeholder="0.00" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">المبلغ المحصل حتى الآن (ر.س)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">المبلغ المحصل (ر.س)</label>
                 <input type="number" className="w-full p-2 border rounded-md outline-none focus:border-green-500"
                   placeholder="0.00" value={formData.collectedAmount} onChange={e => setFormData({...formData, collectedAmount: e.target.value})} />
               </div>
@@ -418,7 +410,7 @@ const ProjectForm = ({ onClose, initialData, onSave }) => {
             </div>
           </div>
 
-          {/* القسم 4: التحديثات والمهندسين */}
+          {/* 4. Updates & Team */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
              <div className="bg-amber-50 p-4 rounded-lg border border-amber-100">
                 <h4 className="text-sm font-bold text-amber-900 mb-2 flex items-center gap-2"><History className="w-4 h-4"/> آخر تحديث</h4>
@@ -440,7 +432,7 @@ const ProjectForm = ({ onClose, initialData, onSave }) => {
              </div>
           </div>
 
-          {/* القسم 5: العميل والملاحظات */}
+          {/* 5. Client & Notes */}
            <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                  <input type="text" placeholder="اسم العميل" className="w-full p-2 border rounded-md text-sm"
@@ -463,7 +455,7 @@ const ProjectForm = ({ onClose, initialData, onSave }) => {
   );
 };
 
-// 3. Project Card
+// 3. Comprehensive Project Card (Replaces Detail View)
 const ProjectCard = ({ project, onEdit, onDelete }) => {
   const copyToClipboard = (text) => {
     const textarea = document.createElement('textarea');
@@ -483,9 +475,17 @@ const ProjectCard = ({ project, onEdit, onDelete }) => {
   const collectionPercentage = totalPrice > 0 ? Math.min(100, Math.round((collected / totalPrice) * 100)) : 0;
 
   const getStageColor = (stage) => {
-    if (stage === 'تمت الترسية') return 'text-green-700 bg-green-50 border-green-100';
+    if (stage === 'تمت الترسية') return 'text-emerald-700 bg-emerald-50 border-emerald-100';
     if (stage === 'لم تتم الترسية') return 'text-red-700 bg-red-50 border-red-100';
     return 'text-amber-700 bg-amber-50 border-amber-100';
+  };
+
+  const getSourceColor = (source) => {
+    return PROJECT_SOURCE_COLORS[source] || 'text-gray-700 bg-gray-50 border-gray-200';
+  };
+
+  const getStatusColor = (status) => {
+    return STATUS_COLORS[status] || 'text-gray-700 bg-gray-50 border-gray-200';
   };
 
   return (
@@ -493,17 +493,12 @@ const ProjectCard = ({ project, onEdit, onDelete }) => {
       {/* Top: Status */}
       <div className="flex justify-between items-start mb-3">
         <div className="flex gap-2 flex-wrap">
-          <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold border ${executionInfo.color}`}>
+          <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold border ${executionInfo.color} shadow-sm`}>
             {executionInfo.label}
           </span>
-          {project.status !== 'جديد' && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs bg-gray-100 text-gray-600 border border-gray-200">
-               {project.status}
-            </span>
-          )}
-           {project.status === 'جديد' && (
-            <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-md text-xs font-medium">جديد</span>
-          )}
+          <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium border shadow-sm ${getStatusColor(project.status)}`}>
+             {project.status || 'غير محدد'}
+          </span>
         </div>
         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button onClick={() => onEdit(project)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md"><Edit2 className="w-4 h-4" /></button>
@@ -511,7 +506,7 @@ const ProjectCard = ({ project, onEdit, onDelete }) => {
         </div>
       </div>
 
-      {/* Meta Data Grid */}
+      {/* Meta Data */}
       <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
          <div className="flex items-center gap-1 text-gray-600" title="نوع الخدمة">
             <ServiceIcon className="w-3.5 h-3.5 text-gray-400" />
@@ -521,13 +516,9 @@ const ProjectCard = ({ project, onEdit, onDelete }) => {
             <MapPin className="w-3.5 h-3.5 text-gray-400" />
             <span className="truncate">{project.location || 'غير محدد'}</span>
          </div>
-         <div className="col-span-2 flex items-center gap-1 text-gray-600" title="المصدر">
-            <Landmark className="w-3.5 h-3.5 text-gray-400" />
-            <span className="truncate">
-               {project.projectSource === 'مشروع مناقصة حكومية' ? 'حكومي' : 
-                project.projectSource === 'مشروع من منصة اعتماد' ? 'اعتماد' : 
-                project.projectSource === 'مشروع خاص' ? 'خاص' : 
-                project.projectSource || 'غير محدد'}
+         <div className="col-span-2 flex items-center gap-1 mt-1">
+            <span className={`truncate text-[10px] px-2 py-0.5 rounded border ${getSourceColor(project.projectSource)}`}>
+               {String(project.projectSource || 'غير محدد')}
             </span>
          </div>
       </div>
@@ -535,9 +526,9 @@ const ProjectCard = ({ project, onEdit, onDelete }) => {
       {/* Title */}
       <h3 className="font-bold text-gray-900 text-base mb-3 line-clamp-2 leading-tight min-h-[2.5rem]" title={project.name}>{project.name}</h3>
 
-      {/* Submission Stage if available */}
+      {/* Submission Stage */}
       {project.submissionStage && (
-        <div className={`mb-3 flex items-start gap-2 text-xs px-2 py-1.5 rounded border ${getStageColor(project.submissionStage)}`}>
+        <div className={`mb-3 flex items-start gap-2 text-xs px-2 py-1.5 rounded border shadow-sm ${getStageColor(project.submissionStage)}`}>
           <Gavel className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
           <span className="font-medium truncate">{project.submissionStage}</span>
         </div>
@@ -545,16 +536,16 @@ const ProjectCard = ({ project, onEdit, onDelete }) => {
 
       {/* Financials */}
       {totalPrice > 0 && (
-        <div className="mb-4 bg-gray-50 p-2 rounded-lg border border-gray-100">
+        <div className="mb-3 bg-gray-50 p-2 rounded-lg border border-gray-100">
           <div className="flex justify-between text-xs mb-1 font-medium">
             <span className="text-gray-500">العقد: {totalPrice.toLocaleString()}</span>
-            <span className={collectionPercentage === 100 ? "text-green-600" : "text-blue-600"}>
+            <span className={collectionPercentage === 100 ? "text-emerald-600" : "text-blue-600"}>
               {collectionPercentage}%
             </span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden mb-1">
             <div 
-              className={`h-1.5 rounded-full ${collectionPercentage >= 100 ? 'bg-green-500' : collectionPercentage > 50 ? 'bg-blue-500' : 'bg-amber-500'}`} 
+              className={`h-1.5 rounded-full ${collectionPercentage >= 100 ? 'bg-emerald-500' : collectionPercentage > 50 ? 'bg-blue-500' : 'bg-amber-500'}`} 
               style={{ width: `${collectionPercentage}%` }}
             ></div>
           </div>
@@ -580,7 +571,7 @@ const ProjectCard = ({ project, onEdit, onDelete }) => {
          </div>
       )}
 
-      {/* Client Details (Full) */}
+      {/* Client Details (Always Shown) */}
       {(project.ownerName || project.ownerPhone || project.ownerEmail) && (
         <div className="mb-3 border-t border-gray-100 pt-2">
            <p className="text-[10px] text-gray-400 mb-1 font-medium">بيانات المالك</p>
@@ -597,7 +588,7 @@ const ProjectCard = ({ project, onEdit, onDelete }) => {
                        <Phone className="w-3 h-3 text-gray-400" />
                        <span className="font-mono dir-ltr">{project.ownerPhone}</span>
                     </div>
-                    <button onClick={() => copyToClipboard(project.ownerPhone)} className="text-blue-500 opacity-0 group-hover/phone:opacity-100 px-1">نسخ</button>
+                    <button onClick={() => copyToClipboard(project.ownerPhone)} className="text-blue-500 opacity-0 group-hover/phone:opacity-100 px-1 text-[10px]">نسخ</button>
                  </div>
               )}
               {project.ownerEmail && (
@@ -606,7 +597,7 @@ const ProjectCard = ({ project, onEdit, onDelete }) => {
                        <Mail className="w-3 h-3 text-gray-400 flex-shrink-0" />
                        <span className="truncate font-mono">{project.ownerEmail}</span>
                     </div>
-                    <button onClick={() => copyToClipboard(project.ownerEmail)} className="text-blue-500 opacity-0 group-hover/email:opacity-100 px-1">نسخ</button>
+                    <button onClick={() => copyToClipboard(project.ownerEmail)} className="text-blue-500 opacity-0 group-hover/email:opacity-100 px-1 text-[10px]">نسخ</button>
                  </div>
               )}
            </div>
@@ -615,7 +606,6 @@ const ProjectCard = ({ project, onEdit, onDelete }) => {
 
       {/* Notes & Update */}
       <div className="mt-auto pt-2 border-t border-gray-50 space-y-2">
-         {/* Last Update */}
          {(project.lastUpdateDate || project.lastUpdateNote) && (
             <div className="bg-amber-50 border border-amber-100 rounded p-2">
                <div className="flex items-center gap-1 mb-1 text-[10px] text-amber-800 font-bold">
@@ -625,7 +615,6 @@ const ProjectCard = ({ project, onEdit, onDelete }) => {
                {project.lastUpdateNote && <p className="text-[10px] text-gray-600 leading-relaxed">{project.lastUpdateNote}</p>}
             </div>
          )}
-         {/* General Notes */}
          {project.notes && (
             <div className="flex items-start gap-1.5 text-[10px] text-gray-500 bg-gray-50 p-1.5 rounded border border-gray-100">
                <FileText className="w-3 h-3 mt-0.5 text-gray-400 shrink-0" />
@@ -633,12 +622,53 @@ const ProjectCard = ({ project, onEdit, onDelete }) => {
             </div>
          )}
       </div>
-
     </div>
   );
 };
 
-// 4. Main App Component
+// 4. AI Advisor
+const AIAdvisor = ({ projects }) => {
+  const [loading, setLoading] = useState(false);
+  const [analysis, setAnalysis] = useState(null);
+  const [error, setError] = useState(null);
+
+  const analyzeProjects = async () => {
+    if (projects.length === 0) {
+      setAnalysis("لا توجد مشاريع حالياً للتحليل.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    const prompt = `بصفتك مستشار مالي وهندسي، حلل المشاريع التالية باختصار: ${JSON.stringify(projects.map(p => ({
+      name: p.name, 
+      status: p.status, 
+      price: p.price,
+      collected: p.collectedAmount,
+      execution: p.executionStatus
+    })))}`;
+    
+    try {
+      const response = await fetch(AI_MODEL_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
+      if (!response.ok) throw new Error('فشل الاتصال');
+      const data = await response.json();
+      setAnalysis(data.candidates?.[0]?.content?.parts?.[0]?.text);
+    } catch (err) { setError("حدث خطأ."); } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-6 shadow-sm border border-indigo-100 mb-8">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-bold text-indigo-900 flex items-center gap-2"><BrainCircuit className="w-6 h-6 text-indigo-600" /> المستشار الذكي</h3>
+        <button onClick={analyzeProjects} disabled={loading} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center gap-2 text-sm transition-colors disabled:opacity-50">
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <BrainCircuit className="w-4 h-4" />} تحليل
+        </button>
+      </div>
+      {analysis && <div className="bg-white p-4 rounded-lg border border-indigo-100 text-gray-700 text-sm leading-relaxed">{analysis}</div>}
+    </div>
+  );
+};
+
+// 5. Main App Component
 export default function App() {
   const [user, setUser] = useState(null);
   const [projects, setProjects] = useState([]);
@@ -647,81 +677,46 @@ export default function App() {
   const [editingProject, setEditingProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     const initAuth = async () => {
-      if (USE_CUSTOM_DB) {
-        await signInAnonymously(auth);
-      } else {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
-        }
-      }
+      if (USE_CUSTOM_DB) { await signInAnonymously(auth); } 
+      else { if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) { await signInWithCustomToken(auth, __initial_auth_token); } else { await signInAnonymously(auth); } }
     };
     initAuth();
-
-    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
-
-    return () => unsubscribeAuth();
+    return onAuthStateChanged(auth, setUser);
   }, []);
 
   useEffect(() => {
     if (!user) return;
-
     const projectsRef = getProjectsCollection();
-    
-    const unsubscribeDocs = onSnapshot(projectsRef, 
-      (snapshot) => {
-        const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        fetched.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-        setProjects(fetched);
-        setLoading(false);
-      },
-      (error) => {
-        console.error("Firestore Error:", error);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribeDocs();
+    return onSnapshot(projectsRef, (snapshot) => {
+      const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      fetched.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+      setProjects(fetched);
+      setLoading(false);
+    });
   }, [user]);
 
   const handleSave = async (data) => {
     if (!user) return;
-    
     try {
       if (editingProject) {
         const docRef = getProjectDoc(editingProject.id);
         await updateDoc(docRef, { ...data });
       } else {
         const collectionRef = getProjectsCollection();
-        await addDoc(collectionRef, {
-          ...data,
-          createdAt: serverTimestamp(),
-          createdBy: user.uid
-        });
+        await addDoc(collectionRef, { ...data, createdAt: serverTimestamp(), createdBy: user.uid });
       }
       setIsFormOpen(false);
       setEditingProject(null);
-    } catch (err) {
-      console.error("Error saving:", err);
-      alert("حدث خطأ أثناء الحفظ. تأكد من صلاحيات قاعدة البيانات.");
-    }
+    } catch (err) { console.error(err); alert("حدث خطأ."); }
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('هل أنت متأكد من حذف هذا المشروع؟')) return;
-    try {
-      const docRef = getProjectDoc(id);
-      await deleteDoc(docRef);
-    } catch (err) {
-      console.error("Error deleting:", err);
-      alert("حدث خطأ أثناء الحذف.");
-    }
+    if (!confirm('هل أنت متأكد؟')) return;
+    try { await deleteDoc(getProjectDoc(id)); } catch (err) { console.error(err); }
   };
 
   const openEdit = (project) => {
@@ -729,6 +724,7 @@ export default function App() {
     setIsFormOpen(true);
   };
 
+  // Filter Logic
   const filteredProjects = projects.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           p.ownerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -739,20 +735,24 @@ export default function App() {
     let matchesTab = false;
     if (activeTab === 'all') {
       matchesTab = true;
-    } else if (activeTab === 'government') {
-      matchesTab = p.projectSource && (
-        p.projectSource.includes('حكومي') || 
-        p.projectSource.includes('اعتماد') || 
-        p.projectSource.includes('مدن') ||
-        p.projectSource.includes('الهيئات')
-      );
-    } else if (activeTab === 'bidding') {
-      matchesTab = (p.submissionStage && p.submissionStage !== '') || 
-                   ['تم التقديم', 'تحت المراجعة', 'بانتظار الموافقة'].includes(p.status);
-    } else if (activeTab === 'current') {
-      matchesTab = ['جاري التصميم', 'جاري الإشراف', 'مكتمل'].includes(p.status);
-    } else if (activeTab === 'new') {
-      matchesTab = p.status === 'جديد';
+    } 
+    else if (['ongoing', 'stalled', 'financially_halted', 'under_study'].includes(activeTab)) {
+      matchesTab = p.executionStatus === activeTab;
+    }
+    else if (activeTab === 'source_private') {
+      matchesTab = p.projectSource === 'مشروع خاص';
+    }
+    else if (activeTab === 'source_etimad') {
+      matchesTab = p.projectSource && p.projectSource.includes('اعتماد');
+    }
+    else if (activeTab === 'source_modon') {
+      matchesTab = p.projectSource && p.projectSource.includes('مدن');
+    }
+    else if (activeTab === 'source_gov') {
+      matchesTab = p.projectSource && (p.projectSource.includes('حكومية') || p.projectSource.includes('مناقصة'));
+    }
+    else if (activeTab === 'source_royal') {
+      matchesTab = p.projectSource && p.projectSource.includes('الهيئات');
     }
 
     return matchesSearch && matchesTab;
@@ -760,71 +760,46 @@ export default function App() {
 
   const stats = {
     total: projects.length,
-    totalValue: projects.reduce((acc, curr) => acc + (Number(curr.price) || 0), 0),
-    designCount: projects.filter(p => p.serviceType === 'design').length,
-    supervisionCount: projects.filter(p => p.serviceType === 'supervision').length
+    totalValue: projects.reduce((acc, p) => {
+      const isSigned = 
+        p.submissionStage === 'تمت الترسية' || 
+        (!p.submissionStage && ['جاري التصميم', 'جاري الإشراف', 'مكتمل'].includes(p.status));
+      return isSigned ? acc + (Number(p.price) || 0) : acc;
+    }, 0),
+    totalCollected: projects.reduce((acc, curr) => acc + (Number(curr.collectedAmount) || 0), 0),
+    stalledCount: projects.filter(p => p.executionStatus === 'stalled').length
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50" dir="rtl">
-        <div className="text-center">
-          <Loader2 className="w-10 h-10 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-500">جاري تحميل المشاريع... - مرحبا بك في CMDEC</p>
-        </div>
-      </div>
-    );
+  if (!isAuthenticated) {
+    return <LoginScreen onLogin={() => setIsAuthenticated(true)} />;
   }
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><Loader2 className="w-10 h-10 animate-spin text-blue-600" /></div>;
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-800" dir="rtl">
       <header className="bg-white shadow-sm sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-          {/* Header Container */}
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            
-            {/* Right Side: Title & Icon (Order 2 on mobile, 1 on desktop) */}
             <div className="flex items-center gap-3 w-full md:w-auto justify-center md:justify-start order-2 md:order-1">
               <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-blue-200">
                 <LayoutDashboard className="w-6 h-6" />
               </div>
               <div>
-                <h1 className="text-xl font-extrabold text-gray-900">لوحة تحكم المشاريع</h1>
-                <p className="text-xs text-gray-500">قاعدة بيانات المشاريع للمكتب الهندسي CMDEC</p>
+                <h1 className="text-xl font-extrabold text-gray-900">إدارة المكتب الهندسي</h1>
+                <p className="text-xs text-gray-500">منظومة متابعة المشاريع والتحصيل</p>
               </div>
             </div>
-
-            {/* Center: Logo (Order 1 on mobile to be on top, 2 on desktop to be in middle) */}
             <div className="order-1 md:order-2 mb-2 md:mb-0">
-               {/* ملاحظة: تأكد من وضع ملف الصورة 'download (1).jpg' في المجلد العام public folder */}
-               <img 
-                 src="download (1).jpg" 
-                 alt="CMDEC Logo" 
-                 className="h-20 object-contain" // ارتفاع مناسب للشعار
-                 onError={(e) => {
-                   e.target.style.display = 'none';
-                 }}
-               />
+               <img src="download (1).jpg" alt="Logo" className="h-20 object-contain" onError={(e) => {e.target.style.display = 'none';}} />
             </div>
-            
-            {/* Left Side: Search & Action (Order 3) */}
             <div className="flex items-center gap-3 w-full md:w-auto justify-center md:justify-end order-3">
                <div className="relative flex-1 md:flex-none md:w-64">
                 <Search className="w-4 h-4 absolute right-3 top-3 text-gray-400" />
-                <input 
-                  type="text" 
-                  placeholder="بحث برقم، اسم، مدينة أو مهندس..." 
-                  className="w-full pl-4 pr-10 py-2 bg-gray-100 rounded-full text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all outline-none"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+                <input type="text" placeholder="بحث..." className="w-full pl-4 pr-10 py-2 bg-gray-100 rounded-full text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                </div>
-               <button 
-                onClick={() => { setEditingProject(null); setIsFormOpen(true); }}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full font-medium text-sm flex items-center gap-2 shadow-lg shadow-blue-200 transition active:scale-95"
-              >
-                <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">مشروع جديد</span>
+               <button onClick={() => { setEditingProject(null); setIsFormOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full font-medium text-sm flex items-center gap-2 shadow-lg transition active:scale-95">
+                <Plus className="w-4 h-4" /> <span className="hidden sm:inline">مشروع جديد</span>
               </button>
             </div>
           </div>
@@ -832,50 +807,34 @@ export default function App() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
-            <div>
-              <p className="text-sm text-gray-500 mb-1">إجمالي قيمة العقود (المقدرة)</p>
-              <h2 className="text-3xl font-bold text-gray-900">{stats.totalValue.toLocaleString()} <span className="text-sm font-normal text-gray-400">ر.س</span></h2>
-            </div>
-            <div className="mt-4 flex gap-2 flex-wrap">
-                <div className="flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-1 rounded-md">
-                    <Activity className="w-3 h-3" />
-                    <span>{stats.total} مشاريع</span>
-                </div>
-                <div className="flex items-center gap-1 text-xs text-indigo-700 bg-indigo-50 px-2 py-1 rounded-md">
-                    <Ruler className="w-3 h-3" />
-                    <span>{stats.designCount} تصميم</span>
-                </div>
-                 <div className="flex items-center gap-1 text-xs text-amber-700 bg-amber-50 px-2 py-1 rounded-md">
-                    <HardHat className="w-3 h-3" />
-                    <span>{stats.supervisionCount} إشراف</span>
-                </div>
-            </div>
-          </div>
-          <div className="md:col-span-2">
-            <AIAdvisor projects={projects} />
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+           <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+              <p className="text-xs text-gray-500 mb-1">إجمالي العقود (الموقعة)</p>
+              <h3 className="text-xl font-bold text-gray-900">{stats.totalValue.toLocaleString()} <span className="text-xs font-normal">ر.س</span></h3>
+           </div>
+           <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+              <p className="text-xs text-gray-500 mb-1">إجمالي المحصل</p>
+              <h3 className="text-xl font-bold text-emerald-600">{stats.totalCollected.toLocaleString()} <span className="text-xs font-normal">ر.س</span></h3>
+           </div>
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+              <p className="text-xs text-gray-500 mb-1">عدد المشاريع</p>
+              <h3 className="text-xl font-bold text-blue-600">{stats.total}</h3>
+           </div>
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+              <p className="text-xs text-gray-500 mb-1">مشاريع متعثرة</p>
+              <h3 className="text-xl font-bold text-red-600">{stats.stalledCount}</h3>
+           </div>
+           <div className="md:col-span-4">
+             <AIAdvisor projects={projects} />
+           </div>
         </div>
 
         <div className="flex overflow-x-auto pb-4 mb-6 gap-2 no-scrollbar">
           {FILTERS.map(filter => {
             const Icon = filter.icon;
-            const isActive = activeTab === filter.id;
             return (
-              <button
-                key={filter.id}
-                onClick={() => setActiveTab(filter.id)}
-                className={`px-5 py-2.5 rounded-xl font-medium text-sm whitespace-nowrap transition-all border flex items-center gap-2 ${
-                  isActive
-                  ? filter.id === 'all' 
-                    ? 'bg-gray-800 text-white border-gray-800 shadow-lg'
-                    : `bg-white ${filter.color} border-current shadow-md ring-1 ring-current` 
-                  : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                }`}
-              >
-                {Icon && <Icon className="w-4 h-4" />}
-                {filter.label}
+              <button key={filter.id} onClick={() => setActiveTab(filter.id)} className={`px-4 py-2 rounded-lg font-medium text-xs whitespace-nowrap transition-all border flex items-center gap-2 ${activeTab === filter.id ? 'bg-gray-800 text-white border-gray-800 shadow-lg' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>
+                {Icon && <Icon className="w-3.5 h-3.5" />} {filter.label}
               </button>
             );
           })}
@@ -887,43 +846,24 @@ export default function App() {
               <ProjectCard 
                 key={project.id} 
                 project={project} 
-                onEdit={openEdit} 
-                onDelete={handleDelete} 
+                onEdit={(p) => { setEditingProject(p); setIsFormOpen(true); }} 
+                onDelete={handleDelete}
               />
             ))}
           </div>
         ) : (
           <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-300">
-            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Ruler className="w-8 h-8 text-gray-400" />
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-1">لا توجد مشاريع لعرضها</h3>
-            <p className="text-gray-500 text-sm mb-6">لم يتم العثور على مشاريع تطابق التصنيف المختار.</p>
-            <button 
-              onClick={() => setIsFormOpen(true)}
-              className="text-blue-600 font-medium hover:underline"
-            >
-              أضف مشروعاً هندسياً جديداً
-            </button>
+            <Search className="w-8 h-8 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900">لا توجد نتائج</h3>
           </div>
         )}
       </main>
 
-      {isFormOpen && (
-        <ProjectForm 
-          onClose={() => { setIsFormOpen(false); setEditingProject(null); }}
-          initialData={editingProject}
-          onSave={handleSave}
-        />
-      )}
+      {isFormOpen && <ProjectForm onClose={() => { setIsFormOpen(false); setEditingProject(null); }} initialData={editingProject} onSave={handleSave} />}
       
-      {/* Footer Indicator for DB Connection */}
       <div className="fixed bottom-4 left-4 bg-white/90 backdrop-blur border border-gray-200 px-3 py-1.5 rounded-full text-[10px] text-gray-500 flex items-center gap-2 shadow-sm z-50">
         <div className={`w-2 h-2 rounded-full ${USE_CUSTOM_DB ? 'bg-green-500' : 'bg-amber-500'}`}></div>
-        <span className="font-medium">
-          {USE_CUSTOM_DB ? 'متصل بقاعدة بيانات خاصة' : 'وضع التجربة (Demo DB)'}
-        </span>
-        {USE_CUSTOM_DB ? <Database className="w-3 h-3 text-green-600" /> : <Wifi className="w-3 h-3 text-amber-600" />}
+        <span className="font-medium">{USE_CUSTOM_DB ? 'قاعدة بيانات خاصة' : 'وضع التجربة'}</span>
       </div>
     </div>
   );
