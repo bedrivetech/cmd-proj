@@ -1,38 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Plus, 
-  Edit2, 
-  Trash2, 
-  Phone, 
-  User, 
-  DollarSign, 
-  FileText, 
-  Briefcase, 
-  Building2, 
-  Activity, 
-  X, 
-  BrainCircuit, 
-  Loader2,
-  Copy,
-  LayoutDashboard,
-  Search,
-  Mail,
-  Ruler,
-  HardHat,
-  FileCheck,
-  MapPin,
-  UserCog,
-  Landmark,
-  Gavel,
-  History,
-  Banknote,
-  AlertTriangle,
-  PlayCircle,
-  Database,
-  Wifi,
-  Calendar,
-  Lock,
-  LogIn
+  Plus, Edit2, Trash2, Phone, User, DollarSign, FileText, Briefcase, Building2, Activity, 
+  X, BrainCircuit, Loader2, Copy, LayoutDashboard, Search, Mail, Ruler, HardHat, FileCheck, 
+  MapPin, UserCog, Landmark, Gavel, History, Banknote, AlertTriangle, PlayCircle, Database, 
+  Wifi, Calendar as CalendarIcon, Lock, LogIn, Moon, Sun, Download, Archive, 
+  MessageCircle, ChevronDown, Kanban, LayoutGrid, ArrowUpDown, CheckSquare, Square, Trash
 } from 'lucide-react';
 
 // --- Firebase Imports ---
@@ -44,14 +16,7 @@ import {
   onAuthStateChanged 
 } from 'firebase/auth';
 import { 
-  getFirestore, 
-  collection, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  onSnapshot, 
-  serverTimestamp
+  getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, serverTimestamp 
 } from 'firebase/firestore';
 
 // ==========================================================================
@@ -94,75 +59,38 @@ const getProjectDoc = (id) => {
 const apiKey = "AIzaSyDRVla9f593dBhdLLSZhhv1v7V7DeejUuE"; 
 const AI_MODEL_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
-// 🔐 إعدادات الدخول (LOGIN CREDENTIALS)
 const APP_USERNAME = "cmdec";
 const APP_PASSWORD = "cmdec";
 
 const FILTERS = [
   { id: 'all', label: 'الكل', icon: LayoutDashboard },
-  { id: 'ongoing', label: 'مشاريع مستمرة', icon: PlayCircle, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+  { id: 'ongoing', label: 'مستمرة', icon: PlayCircle, color: 'text-emerald-600', bg: 'bg-emerald-50' },
   { id: 'under_study', label: 'تحت الدراسة', icon: FileText, color: 'text-sky-600', bg: 'bg-sky-50' },
-  { id: 'stalled', label: 'مشاريع متعثرة', icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50' },
+  { id: 'stalled', label: 'متعثرة', icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50' },
   { id: 'financially_halted', label: 'متوقفة مالياً', icon: Banknote, color: 'text-rose-600', bg: 'bg-rose-50' },
   { id: 'source_private', label: 'قطاع خاص', icon: Briefcase },
-  { id: 'source_etimad', label: 'منصة اعتماد', icon: Landmark },
-  { id: 'source_modon', label: 'منصة مدن', icon: Building2 },
-  { id: 'source_gov', label: 'مناقصات حكومية', icon: Gavel },
-  { id: 'source_royal', label: 'الهيئات الملكية', icon: Landmark },
+  { id: 'source_etimad', label: 'اعتماد', icon: Landmark },
+  { id: 'source_gov', label: 'حكومية', icon: Gavel },
 ];
 
 const EXECUTION_STATUS_OPTIONS = [
-  { id: 'ongoing', label: 'مستمر', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
-  { id: 'stalled', label: 'متعثر', color: 'text-red-700 bg-red-50 border-red-200' },
-  { id: 'financially_halted', label: 'متوقف مالياً', color: 'text-rose-700 bg-rose-50 border-rose-200' },
-  { id: 'under_study', label: 'تحت الدراسة', color: 'text-sky-700 bg-sky-50 border-sky-200' },
-  { id: 'completed', label: 'مكتمل', color: 'text-slate-700 bg-slate-50 border-slate-200' },
-];
-
-const PROJECT_SOURCE_COLORS = {
-  'مشروع خاص': 'text-indigo-700 bg-indigo-50 border-indigo-200',
-  'مشروع من منصة اعتماد': 'text-teal-700 bg-teal-50 border-teal-200',
-  'مشروع من منصة مدن': 'text-cyan-700 bg-cyan-50 border-cyan-200',
-  'مشروع مناقصة حكومية': 'text-emerald-700 bg-emerald-50 border-emerald-200',
-  'مشاريع الهيئات الملكية': 'text-purple-700 bg-purple-50 border-purple-200',
-};
-
-const STATUS_COLORS = {
-  'جديد': 'text-blue-700 bg-blue-50 border-blue-200',
-  'جاري التصميم': 'text-indigo-700 bg-indigo-50 border-indigo-200',
-  'جاري الإشراف': 'text-violet-700 bg-violet-50 border-violet-200',
-  'بانتظار الموافقة': 'text-amber-700 bg-amber-50 border-amber-200',
-  'مكتمل': 'text-emerald-700 bg-emerald-50 border-emerald-200',
-  'تم التقديم': 'text-cyan-700 bg-cyan-50 border-cyan-200',
-  'تحت المراجعة': 'text-orange-700 bg-orange-50 border-orange-200',
-};
-
-const PROJECT_SOURCES = [
-  'مشروع خاص', 
-  'مشروع من منصة اعتماد', 
-  'مشروع من منصة مدن', 
-  'مشروع مناقصة حكومية', 
-  'مشاريع الهيئات الملكية'
+  { id: 'ongoing', label: 'مستمر', color: 'text-emerald-700 bg-emerald-50 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800' },
+  { id: 'stalled', label: 'متعثر', color: 'text-red-700 bg-red-50 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800' },
+  { id: 'financially_halted', label: 'متوقف مالياً', color: 'text-rose-700 bg-rose-50 border-rose-200 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-800' },
+  { id: 'under_study', label: 'تحت الدراسة', color: 'text-sky-700 bg-sky-50 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800' },
+  { id: 'completed', label: 'مكتمل', color: 'text-slate-700 bg-slate-50 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700' },
 ];
 
 const STATUS_OPTIONS = [
-  'جديد', 
-  'جاري التصميم', 
-  'جاري الإشراف', 
-  'بانتظار الموافقة', 
-  'مكتمل', 
-  'تم التقديم', 
-  'تحت المراجعة'
+  'جديد', 'جاري التصميم', 'جاري الإشراف', 'بانتظار الموافقة', 'مكتمل', 'تم التقديم', 'تحت المراجعة'
+];
+
+const PROJECT_SOURCES = [
+  'مشروع خاص', 'مشروع من منصة اعتماد', 'مشروع من منصة مدن', 'مشروع مناقصة حكومية', 'مشاريع الهيئات الملكية'
 ];
 
 const SUBMISSION_STAGES = [
-  'طلب تسعير', 
-  'جاري التسعير', 
-  'تم تقديم عرض السعر', 
-  'تحت التقييم والرد من المالك', 
-  'تمت الترسية', 
-  'طلب تعديل فني او مالي', 
-  'لم تتم الترسية'
+  'طلب تسعير', 'جاري التسعير', 'تم تقديم عرض السعر', 'تحت التقييم والرد من المالك', 'تمت الترسية', 'طلب تعديل فني او مالي', 'لم تتم الترسية'
 ];
 
 const SERVICE_TYPES = [
@@ -175,17 +103,50 @@ const SERVICE_TYPES = [
 ];
 
 const SAUDI_LOCATIONS = [
-  'الرياض', 'جدة', 'مكة المكرمة', 'المدينة المنورة', 
-  'الدمام', 'الخبر', 'الظهران', 'الاحساء', 'القطيف', 'الجبيل',
-  'القصيم', 'بريدة', 'عنيزة', 
-  'أبها', 'خميس مشيط', 'جازان', 'نجران', 
-  'تبوك', 'حائل', 'عرعر', 'الجوف', 'سكاكا', 
+  'الرياض', 'جدة', 'مكة المكرمة', 'المدينة المنورة', 'الدمام', 'الخبر', 'رأس الخير', 'الاحساء', 'القطيف', 'الجبيل',
+  'القصيم', 'بريدة', 'عنيزة', 'أبها', 'خميس مشيط', 'جازان', 'نجران', 'تبوك', 'حائل', 'عرعر', 'الجوف', 'نيوم', 
   'الباحة', 'الطائف', 'ينبع', 'بيشة', 'حفر الباطن'
 ];
 
+// --- Helper Functions ---
+
+const calculateFinancials = (project) => {
+  const price = Number(project.price) || 0;
+  const payments = project.payments || [];
+  const collected = payments.reduce((acc, p) => p.isPaid ? acc + (Number(p.amount) || 0) : acc, 0);
+  const percentage = price > 0 ? Math.min(100, Math.round((collected / price) * 100)) : 0;
+  return { price, collected, percentage };
+};
+
+const exportToCSV = (projects) => {
+  const headers = ['اسم المشروع', 'العميل', 'رقم الهاتف', 'نوع الخدمة', 'قيمة العقد', 'المحصل', 'الحالة', 'بداية العقد', 'نهاية العقد'];
+  const rows = projects.map(p => {
+    const fin = calculateFinancials(p);
+    return [
+      `"${p.name}"`, 
+      `"${p.ownerName || ''}"`, 
+      `"${p.ownerPhone || ''}"`,
+      `"${SERVICE_TYPES.find(t => t.id === p.serviceType)?.label || ''}"`,
+      fin.price,
+      fin.collected,
+      `"${p.status}"`,
+      p.contractStartDate || '',
+      p.contractEndDate || ''
+    ];
+  });
+  
+  const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `projects_export_${new Date().toISOString().split('T')[0]}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
 // --- Components ---
 
-// 1. Login Screen
 const LoginScreen = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -201,97 +162,75 @@ const LoginScreen = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4 font-sans" dir="rtl">
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-200">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col items-center justify-center p-4 font-sans transition-colors duration-300" dir="rtl">
+      <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-200 dark:border-gray-700">
         <div className="flex justify-center mb-6">
-           <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center">
-             <Lock className="w-10 h-10 text-blue-600" />
+           <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+             <Lock className="w-10 h-10 text-blue-600 dark:text-blue-400" />
            </div>
         </div>
-        <h2 className="text-2xl font-bold text-center text-gray-900 mb-2">تسجيل الدخول</h2>
-        <p className="text-gray-500 text-center mb-8 text-sm">إدارة المكتب الهندسي</p>
+        <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-white mb-2">تسجيل الدخول</h2>
+        <p className="text-gray-500 dark:text-gray-400 text-center mb-8 text-sm">CMDEC Projects Dashboard</p>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">اسم المستخدم</label>
-            <input 
-              type="text" 
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-              placeholder="أدخل اسم المستخدم"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">اسم المستخدم</label>
+            <input type="text" className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
+              placeholder="أدخل اسم المستخدم" value={username} onChange={(e) => setUsername(e.target.value)} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">كلمة المرور</label>
-            <input 
-              type="password" 
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-              placeholder="أدخل كلمة المرور"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">كلمة المرور</label>
+            <input type="password" className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
+              placeholder="أدخل كلمة المرور" value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
-          
           {error && (
-            <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4" />
-              {error}
+            <div className="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 text-sm p-3 rounded-lg flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" /> {error}
             </div>
           )}
-
-          <button 
-            type="submit" 
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition shadow-lg flex items-center justify-center gap-2"
-          >
-            <LogIn className="w-5 h-5" />
-            دخول للنظام
+          <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition shadow-lg flex items-center justify-center gap-2">
+            <LogIn className="w-5 h-5" /> دخول للنظام
           </button>
         </form>
-        <div className="mt-6 text-center text-xs text-gray-400">
-          CMDEC System v2.0
-        </div>
+        <div className="mt-6 text-center text-xs text-gray-400">CMDEC Projects System v2.5</div>
       </div>
     </div>
   );
 };
 
-// 2. Project Form Modal
 const ProjectForm = ({ onClose, initialData, onSave }) => {
   const [formData, setFormData] = useState({
-    name: '',
-    serviceType: 'design',
-    price: '',
-    collectedAmount: '', 
-    status: 'جديد',
-    executionStatus: 'ongoing', 
-    location: '',
-    projectSource: '',
-    submissionStage: '',
-    contractStartDate: '', 
-    contractEndDate: '', 
-    followUpEngineer: '',
-    designEngineer: '',
-    ownerName: '',
-    ownerPhone: '',
-    ownerEmail: '',
-    notes: '',
-    lastUpdateDate: new Date().toISOString().split('T')[0],
-    lastUpdateNote: ''
+    name: '', serviceType: 'design', price: '', status: 'جديد', executionStatus: 'ongoing', location: '',
+    projectSource: '', submissionStage: '', contractStartDate: '', contractEndDate: '',
+    followUpEngineer: '', designEngineer: '', ownerName: '', ownerPhone: '', ownerEmail: '',
+    notes: '', lastUpdateDate: new Date().toISOString().split('T')[0], lastUpdateNote: '',
+    payments: [], // New: Payment Milestones
+    isArchived: false
   });
 
   useEffect(() => {
-    if (initialData) setFormData({
-      ...formData,
-      ...initialData,
+    if (initialData) setFormData({ 
+      ...formData, ...initialData,
       lastUpdateDate: initialData.lastUpdateDate || new Date().toISOString().split('T')[0],
       lastUpdateNote: initialData.lastUpdateNote || '',
-      collectedAmount: initialData.collectedAmount || '',
-      contractStartDate: initialData.contractStartDate || '',
-      contractEndDate: initialData.contractEndDate || '',
-      executionStatus: initialData.executionStatus || 'ongoing'
+      payments: initialData.payments || [],
+      isArchived: initialData.isArchived || false
     });
   }, [initialData]);
+
+  const handlePaymentChange = (index, field, value) => {
+    const newPayments = [...formData.payments];
+    newPayments[index][field] = value;
+    setFormData({ ...formData, payments: newPayments });
+  };
+
+  const addPayment = () => {
+    setFormData({ ...formData, payments: [...formData.payments, { title: '', amount: '', isPaid: false }] });
+  };
+
+  const removePayment = (index) => {
+    setFormData({ ...formData, payments: formData.payments.filter((_, i) => i !== index) });
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -300,151 +239,110 @@ const ProjectForm = ({ onClose, initialData, onSave }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
-        <div className="p-4 border-b bg-gray-50 flex justify-between items-center sticky top-0">
-          <h2 className="font-bold text-lg text-gray-800">
-            {initialData ? 'تعديل بيانات المشروع' : 'إضافة مشروع جديد'}
-          </h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition">
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh] animate-in fade-in zoom-in-95 duration-200">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white dark:bg-gray-800 z-10">
+          <h2 className="font-bold text-lg text-gray-800 dark:text-white">{initialData ? 'تعديل المشروع' : 'مشروع جديد'}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400 transition"><X className="w-5 h-5" /></button>
         </div>
         
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6">
-          {/* 1. Basic Info */}
+        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6 custom-scrollbar">
+          {/* Basic Info */}
           <div className="space-y-4">
-            <h3 className="text-sm font-bold text-blue-800 border-b border-blue-100 pb-2">المعلومات الأساسية</h3>
+            <h3 className="text-sm font-bold text-blue-600 dark:text-blue-400 border-b border-blue-100 dark:border-blue-900/30 pb-2">البيانات الأساسية</h3>
             <div className="grid grid-cols-1 gap-4">
-               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">اسم المشروع</label>
-                <input required type="text" className="w-full p-2 border rounded-md outline-none focus:border-blue-500"
+               <input required type="text" placeholder="اسم المشروع" className="w-full p-2 border dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white focus:border-blue-500 outline-none"
                   value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
-              </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">جهة المشروع</label>
-                  <select className="w-full p-2 border rounded-md outline-none bg-white"
-                    value={formData.projectSource} onChange={e => setFormData({...formData, projectSource: e.target.value})}>
-                    <option value="">اختر الجهة...</option>
-                    {PROJECT_SOURCES.map(src => <option key={src} value={src}>{src}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">المدينة</label>
-                  <select className="w-full p-2 border rounded-md outline-none bg-white"
-                    value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})}>
-                    <option value="">اختر الموقع...</option>
-                    {SAUDI_LOCATIONS.map(loc => <option key={loc} value={loc}>{loc}</option>)}
-                  </select>
-                </div>
-                <div>
-                   <label className="block text-sm font-medium text-gray-700 mb-1">نوع الخدمة</label>
-                   <select className="w-full p-2 border rounded-md outline-none bg-white"
-                    value={formData.serviceType} onChange={e => setFormData({...formData, serviceType: e.target.value})}>
-                    {SERVICE_TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 2. Status */}
-          <div className="space-y-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <h3 className="text-sm font-bold text-gray-800 border-b border-gray-200 pb-2 flex items-center gap-2">
-              <Activity className="w-4 h-4" />
-              حالة المشروع والتنفيذ
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">الحالة التنفيذية (للفلترة)</label>
-                <select className="w-full p-2 border rounded-md outline-none bg-white font-semibold text-gray-700"
-                  value={formData.executionStatus} onChange={e => setFormData({...formData, executionStatus: e.target.value})}>
-                  {EXECUTION_STATUS_OPTIONS.map(st => <option key={st.id} value={st.id}>{st.label}</option>)}
+                <select className="w-full p-2 border dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white outline-none" value={formData.projectSource} onChange={e => setFormData({...formData, projectSource: e.target.value})}>
+                  <option value="">جهة المشروع...</option>{PROJECT_SOURCES.map(src => <option key={src} value={src}>{src}</option>)}
                 </select>
-              </div>
-              <div>
-                 <label className="block text-sm font-medium text-gray-700 mb-1">مرحلة التقديم (للمناقصات)</label>
-                 <select className="w-full p-2 border rounded-md outline-none bg-white"
-                  value={formData.submissionStage} onChange={e => setFormData({...formData, submissionStage: e.target.value})}>
-                  <option value="">اختر المرحلة...</option>
-                  {SUBMISSION_STAGES.map(st => <option key={st} value={st}>{st}</option>)}
+                <select className="w-full p-2 border dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white outline-none" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})}>
+                  <option value="">المدينة...</option>{SAUDI_LOCATIONS.map(loc => <option key={loc} value={loc}>{loc}</option>)}
                 </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">الحالة العامة</label>
-                <select className="w-full p-2 border rounded-md outline-none bg-white"
-                  value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})}>
-                  {STATUS_OPTIONS.map(st => <option key={st} value={st}>{st}</option>)}
+                <select className="w-full p-2 border dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white outline-none" value={formData.serviceType} onChange={e => setFormData({...formData, serviceType: e.target.value})}>
+                  {SERVICE_TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
                 </select>
               </div>
             </div>
           </div>
 
-          {/* 3. Financials & Dates */}
-          <div className="space-y-4 bg-green-50 p-4 rounded-lg border border-green-100">
-             <h3 className="text-sm font-bold text-green-900 border-b border-green-200 pb-2 flex items-center gap-2">
-              <Banknote className="w-4 h-4" />
-              البيانات المالية والزمنية
-            </h3>
+          {/* Status */}
+          <div className="space-y-4 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+            <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 pb-2 flex items-center gap-2"><Activity className="w-4 h-4" /> الحالة</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">قيمة العقد الإجمالية (ر.س)</label>
-                <input type="number" className="w-full p-2 border rounded-md outline-none focus:border-green-500"
-                  placeholder="0.00" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">المبلغ المحصل (ر.س)</label>
-                <input type="number" className="w-full p-2 border rounded-md outline-none focus:border-green-500"
-                  placeholder="0.00" value={formData.collectedAmount} onChange={e => setFormData({...formData, collectedAmount: e.target.value})} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">تاريخ بداية العقد</label>
-                <input type="date" className="w-full p-2 border rounded-md outline-none bg-white"
-                  value={formData.contractStartDate} onChange={e => setFormData({...formData, contractStartDate: e.target.value})} />
-              </div>
+              <select className="w-full p-2 border dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white outline-none" value={formData.executionStatus} onChange={e => setFormData({...formData, executionStatus: e.target.value})}>
+                {EXECUTION_STATUS_OPTIONS.map(st => <option key={st.id} value={st.id}>{st.label}</option>)}
+              </select>
+              <select className="w-full p-2 border dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white outline-none" value={formData.submissionStage} onChange={e => setFormData({...formData, submissionStage: e.target.value})}>
+                <option value="">مرحلة المناقصة...</option>{SUBMISSION_STAGES.map(st => <option key={st} value={st}>{st}</option>)}
+              </select>
+              <select className="w-full p-2 border dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white outline-none" value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})}>
+                {STATUS_OPTIONS.map(st => <option key={st} value={st}>{st}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Financials (New: Payments) */}
+          <div className="space-y-4 bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-lg border border-emerald-100 dark:border-emerald-800/50">
+             <div className="flex justify-between items-center border-b border-emerald-200 dark:border-emerald-800 pb-2">
+                <h3 className="text-sm font-bold text-emerald-900 dark:text-emerald-400 flex items-center gap-2"><Banknote className="w-4 h-4" /> الدفعات المالية</h3>
+                <button type="button" onClick={addPayment} className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-2 py-1 rounded flex items-center gap-1"><Plus className="w-3 h-3" /> إضافة دفعة</button>
+             </div>
+             
+             <div className="grid grid-cols-1 gap-4">
                <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">تاريخ نهاية العقد</label>
-                <input type="date" className="w-full p-2 border rounded-md outline-none bg-white"
-                  value={formData.contractEndDate} onChange={e => setFormData({...formData, contractEndDate: e.target.value})} />
-              </div>
-            </div>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">إجمالي قيمة العقد</label>
+                  <input type="number" className="w-full p-2 border dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white outline-none" placeholder="0.00" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} />
+               </div>
+               
+               {/* Payments List */}
+               <div className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar">
+                 {formData.payments.length === 0 && <p className="text-xs text-center text-gray-400 italic">لا توجد دفعات مضافة</p>}
+                 {formData.payments.map((payment, idx) => (
+                   <div key={idx} className="flex gap-2 items-center">
+                     <input type="text" placeholder="عنوان الدفعة (مثلاً: الدفعة الأولى)" className="flex-1 p-1.5 text-xs border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
+                       value={payment.title} onChange={e => handlePaymentChange(idx, 'title', e.target.value)} />
+                     <input type="number" placeholder="المبلغ" className="w-24 p-1.5 text-xs border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                       value={payment.amount} onChange={e => handlePaymentChange(idx, 'amount', e.target.value)} />
+                     <button type="button" onClick={() => handlePaymentChange(idx, 'isPaid', !payment.isPaid)} 
+                       className={`p-1.5 rounded transition ${payment.isPaid ? 'bg-green-500 text-white' : 'bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400'}`} title="حالة الدفع">
+                       {payment.isPaid ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                     </button>
+                     <button type="button" onClick={() => removePayment(idx)} className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 p-1 rounded"><Trash className="w-4 h-4" /></button>
+                   </div>
+                 ))}
+               </div>
+             </div>
+
+             <div className="grid grid-cols-2 gap-4 pt-2 border-t border-emerald-200 dark:border-emerald-800">
+                <input type="date" className="w-full p-2 text-xs border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" title="تاريخ البداية" value={formData.contractStartDate} onChange={e => setFormData({...formData, contractStartDate: e.target.value})} />
+                <input type="date" className="w-full p-2 text-xs border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" title="تاريخ النهاية" value={formData.contractEndDate} onChange={e => setFormData({...formData, contractEndDate: e.target.value})} />
+             </div>
           </div>
 
-          {/* 4. Updates & Team */}
+          {/* Team & Client */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-             <div className="bg-amber-50 p-4 rounded-lg border border-amber-100">
-                <h4 className="text-sm font-bold text-amber-900 mb-2 flex items-center gap-2"><History className="w-4 h-4"/> آخر تحديث</h4>
-                <div className="space-y-2">
-                   <input type="date" className="w-full p-2 border rounded-md text-sm bg-white"
-                    value={formData.lastUpdateDate} onChange={e => setFormData({...formData, lastUpdateDate: e.target.value})} />
-                   <textarea className="w-full p-2 border rounded-md text-sm h-20 bg-white resize-none"
-                    placeholder="ملاحظات التحديث..." value={formData.lastUpdateNote} onChange={e => setFormData({...formData, lastUpdateNote: e.target.value})} />
-                </div>
+             <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800/50 space-y-3">
+                <h4 className="text-sm font-bold text-blue-900 dark:text-blue-400 flex items-center gap-2"><UserCog className="w-4 h-4"/> الفريق</h4>
+                <input type="text" placeholder="مهندس المتابعة" className="w-full p-2 text-sm border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={formData.followUpEngineer} onChange={e => setFormData({...formData, followUpEngineer: e.target.value})} />
+                <input type="text" placeholder="مهندس التصميم/الإدارة" className="w-full p-2 text-sm border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={formData.designEngineer} onChange={e => setFormData({...formData, designEngineer: e.target.value})} />
              </div>
-             <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                <h4 className="text-sm font-bold text-blue-900 mb-2 flex items-center gap-2"><UserCog className="w-4 h-4"/> الفريق</h4>
-                <div className="space-y-2">
-                   <input type="text" placeholder="مهندس المتابعة" className="w-full p-2 border rounded-md text-sm bg-white"
-                    value={formData.followUpEngineer} onChange={e => setFormData({...formData, followUpEngineer: e.target.value})} />
-                   <input type="text" placeholder="مهندس التصميم/الإدارة" className="w-full p-2 border rounded-md text-sm bg-white"
-                    value={formData.designEngineer} onChange={e => setFormData({...formData, designEngineer: e.target.value})} />
-                </div>
+             <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 space-y-3">
+                <h4 className="text-sm font-bold text-gray-900 dark:text-gray-200 flex items-center gap-2"><User className="w-4 h-4"/> العميل</h4>
+                <input type="text" placeholder="الاسم" className="w-full p-2 text-sm border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={formData.ownerName} onChange={e => setFormData({...formData, ownerName: e.target.value})} />
+                <input type="text" placeholder="الجوال" className="w-full p-2 text-sm border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={formData.ownerPhone} onChange={e => setFormData({...formData, ownerPhone: e.target.value})} />
+                <input type="text" placeholder="الإيميل" className="w-full p-2 text-sm border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={formData.ownerEmail} onChange={e => setFormData({...formData, ownerEmail: e.target.value})} />
              </div>
           </div>
 
-          {/* 5. Client & Notes */}
-           <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                 <input type="text" placeholder="اسم العميل" className="w-full p-2 border rounded-md text-sm"
-                  value={formData.ownerName} onChange={e => setFormData({...formData, ownerName: e.target.value})} />
-                 <input type="text" placeholder="رقم الجوال" className="w-full p-2 border rounded-md text-sm"
-                  value={formData.ownerPhone} onChange={e => setFormData({...formData, ownerPhone: e.target.value})} />
-                 <input type="text" placeholder="البريد الإلكتروني" className="w-full p-2 border rounded-md text-sm"
-                  value={formData.ownerEmail} onChange={e => setFormData({...formData, ownerEmail: e.target.value})} />
-              </div>
-              <textarea className="w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 h-20 resize-none"
-                placeholder="ملاحظات عامة إضافية..." value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})}></textarea>
-           </div>
+          {/* Updates */}
+          <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg border border-amber-100 dark:border-amber-800/50 space-y-2">
+             <h4 className="text-sm font-bold text-amber-900 dark:text-amber-400 flex items-center gap-2"><History className="w-4 h-4"/> آخر تحديث</h4>
+             <input type="date" className="w-full p-2 text-sm border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={formData.lastUpdateDate} onChange={e => setFormData({...formData, lastUpdateDate: e.target.value})} />
+             <textarea className="w-full p-2 text-sm border rounded h-16 resize-none dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="تفاصيل التحديث..." value={formData.lastUpdateNote} onChange={e => setFormData({...formData, lastUpdateNote: e.target.value})} />
+          </div>
+
+          <textarea className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg h-20 resize-none dark:bg-gray-700 dark:text-white" placeholder="ملاحظات عامة..." value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})}></textarea>
 
           <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-lg transition active:scale-[0.98]">
             حفظ التغييرات
@@ -455,220 +353,182 @@ const ProjectForm = ({ onClose, initialData, onSave }) => {
   );
 };
 
-// 3. Comprehensive Project Card (Replaces Detail View)
-const ProjectCard = ({ project, onEdit, onDelete }) => {
-  const copyToClipboard = (text) => {
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textarea);
-  };
-
-  const serviceTypeInfo = SERVICE_TYPES.find(t => t.id === project.serviceType) || SERVICE_TYPES[5]; 
-  const ServiceIcon = serviceTypeInfo.icon;
+const ProjectCard = ({ project, onEdit, onDelete, onArchive }) => {
+  const fin = calculateFinancials(project);
+  const serviceInfo = SERVICE_TYPES.find(t => t.id === project.serviceType) || SERVICE_TYPES[5]; 
   const executionInfo = EXECUTION_STATUS_OPTIONS.find(t => t.id === project.executionStatus) || EXECUTION_STATUS_OPTIONS[0];
 
-  const totalPrice = Number(project.price) || 0;
-  const collected = Number(project.collectedAmount) || 0;
-  const collectionPercentage = totalPrice > 0 ? Math.min(100, Math.round((collected / totalPrice) * 100)) : 0;
-
-  const getStageColor = (stage) => {
-    if (stage === 'تمت الترسية') return 'text-emerald-700 bg-emerald-50 border-emerald-100';
-    if (stage === 'لم تتم الترسية') return 'text-red-700 bg-red-50 border-red-100';
-    return 'text-amber-700 bg-amber-50 border-amber-100';
-  };
-
-  const getSourceColor = (source) => {
-    return PROJECT_SOURCE_COLORS[source] || 'text-gray-700 bg-gray-50 border-gray-200';
-  };
-
-  const getStatusColor = (status) => {
-    return STATUS_COLORS[status] || 'text-gray-700 bg-gray-50 border-gray-200';
-  };
-
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow p-4 group relative flex flex-col h-full">
-      {/* Top: Status */}
-      <div className="flex justify-between items-start mb-3">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all p-4 group flex flex-col h-full relative overflow-hidden">
+      {/* Top Bar */}
+      <div className="flex justify-between items-start mb-3 relative z-10">
         <div className="flex gap-2 flex-wrap">
-          <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold border ${executionInfo.color} shadow-sm`}>
-            {executionInfo.label}
-          </span>
-          <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium border shadow-sm ${getStatusColor(project.status)}`}>
-             {project.status || 'غير محدد'}
-          </span>
+          <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold border ${executionInfo.color}`}>{executionInfo.label}</span>
+          <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium border bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600">{project.status}</span>
         </div>
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button onClick={() => onEdit(project)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md"><Edit2 className="w-4 h-4" /></button>
-          <button onClick={() => onDelete(project.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md"><Trash2 className="w-4 h-4" /></button>
+        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-gray-800/80 backdrop-blur rounded-lg">
+          <button onClick={() => onEdit(project)} className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded"><Edit2 className="w-4 h-4" /></button>
+          <button onClick={() => onArchive(project)} className="p-1.5 text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 rounded" title={project.isArchived ? "استعادة" : "أرشفة"}><Archive className="w-4 h-4" /></button>
+          <button onClick={() => onDelete(project.id)} className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded"><Trash2 className="w-4 h-4" /></button>
         </div>
-      </div>
-
-      {/* Meta Data */}
-      <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
-         <div className="flex items-center gap-1 text-gray-600" title="نوع الخدمة">
-            <ServiceIcon className="w-3.5 h-3.5 text-gray-400" />
-            <span className="truncate">{serviceTypeInfo.label}</span>
-         </div>
-         <div className="flex items-center gap-1 text-gray-600" title="المدينة">
-            <MapPin className="w-3.5 h-3.5 text-gray-400" />
-            <span className="truncate">{project.location || 'غير محدد'}</span>
-         </div>
-         <div className="col-span-2 flex items-center gap-1 mt-1">
-            <span className={`truncate text-[10px] px-2 py-0.5 rounded border ${getSourceColor(project.projectSource)}`}>
-               {String(project.projectSource || 'غير محدد')}
-            </span>
-         </div>
       </div>
 
       {/* Title */}
-      <h3 className="font-bold text-gray-900 text-base mb-3 line-clamp-2 leading-tight min-h-[2.5rem]" title={project.name}>{project.name}</h3>
+      <h3 className="font-bold text-gray-900 dark:text-white text-base mb-2 line-clamp-2" title={project.name}>{project.name}</h3>
 
-      {/* Submission Stage */}
+      {/* Meta */}
+      <div className="text-xs text-gray-500 dark:text-gray-400 flex flex-wrap gap-3 mb-3">
+         <span className="flex items-center gap-1"><serviceInfo.icon className="w-3.5 h-3.5" /> {serviceInfo.label}</span>
+         <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {project.location || '-'}</span>
+         <span className="flex items-center gap-1"><Landmark className="w-3.5 h-3.5" /> {project.projectSource || '-'}</span>
+      </div>
+
+      {/* Submission Stage Badge */}
       {project.submissionStage && (
-        <div className={`mb-3 flex items-start gap-2 text-xs px-2 py-1.5 rounded border shadow-sm ${getStageColor(project.submissionStage)}`}>
-          <Gavel className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-          <span className="font-medium truncate">{project.submissionStage}</span>
+        <div className="mb-3 text-xs bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 px-2 py-1.5 rounded border border-gray-100 dark:border-gray-700 flex items-center gap-2">
+          <Gavel className="w-3.5 h-3.5" /> {project.submissionStage}
         </div>
       )}
 
-      {/* Financials */}
-      {totalPrice > 0 && (
-        <div className="mb-3 bg-gray-50 p-2 rounded-lg border border-gray-100">
-          <div className="flex justify-between text-xs mb-1 font-medium">
-            <span className="text-gray-500">العقد: {totalPrice.toLocaleString()}</span>
-            <span className={collectionPercentage === 100 ? "text-emerald-600" : "text-blue-600"}>
-              {collectionPercentage}%
+      {/* Financial Progress */}
+      {fin.price > 0 && (
+        <div className="mb-3 bg-gray-50 dark:bg-gray-700/30 p-2.5 rounded-lg border border-gray-100 dark:border-gray-700">
+          <div className="flex justify-between text-xs mb-1.5 font-medium">
+            <span className="text-gray-500 dark:text-gray-400">المالية ({fin.percentage}%)</span>
+            <span className={fin.percentage === 100 ? "text-emerald-600 dark:text-emerald-400" : "text-blue-600 dark:text-blue-400"}>
+              {fin.collected.toLocaleString()} / {fin.price.toLocaleString()}
             </span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden mb-1">
-            <div 
-              className={`h-1.5 rounded-full ${collectionPercentage >= 100 ? 'bg-emerald-500' : collectionPercentage > 50 ? 'bg-blue-500' : 'bg-amber-500'}`} 
-              style={{ width: `${collectionPercentage}%` }}
-            ></div>
+          <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5 overflow-hidden">
+            <div className={`h-1.5 rounded-full ${fin.percentage >= 100 ? 'bg-emerald-500' : 'bg-blue-500'}`} style={{ width: `${fin.percentage}%` }}></div>
           </div>
-          <div className="text-[10px] text-gray-400 text-left">تم تحصيل: {collected.toLocaleString()}</div>
         </div>
       )}
 
       {/* Dates */}
       {(project.contractStartDate || project.contractEndDate) && (
-        <div className="flex justify-between text-xs text-gray-500 bg-gray-50 p-2 rounded-lg border border-gray-100 mb-3">
-           <div><span className="text-gray-400 block text-[10px]">البداية</span>{project.contractStartDate || '-'}</div>
-           <div className="text-left"><span className="text-gray-400 block text-[10px]">النهاية</span>
-             <span className={new Date(project.contractEndDate) < new Date() ? 'text-red-600 font-bold' : ''}>{project.contractEndDate || '-'}</span>
+        <div className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 p-2 rounded mb-3">
+           <div><span className="block text-gray-400 dark:text-gray-500">البداية</span>{project.contractStartDate || '-'}</div>
+           <div className="text-left"><span className="block text-gray-400 dark:text-gray-500">النهاية</span>
+             <span className={new Date(project.contractEndDate) < new Date() && project.executionStatus !== 'completed' ? 'text-red-600 dark:text-red-400 font-bold' : ''}>{project.contractEndDate || '-'}</span>
            </div>
         </div>
       )}
 
-      {/* Team */}
-      {(project.followUpEngineer || project.designEngineer) && (
-         <div className="mb-3 flex items-center gap-2 text-xs bg-blue-50 text-blue-800 px-2 py-1.5 rounded border border-blue-100">
-            <UserCog className="w-3.5 h-3.5 flex-shrink-0" />
-            <span className="truncate font-medium">{project.followUpEngineer || project.designEngineer}</span>
+      {/* Footer: Client & Contact */}
+      <div className="mt-auto pt-3 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center">
+         <div className="flex items-center gap-2 overflow-hidden">
+            <div className="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400 flex-shrink-0">
+               <User className="w-3.5 h-3.5" />
+            </div>
+            <div className="truncate">
+               <p className="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">{project.ownerName || 'غير محدد'}</p>
+            </div>
          </div>
-      )}
-
-      {/* Client Details (Always Shown) */}
-      {(project.ownerName || project.ownerPhone || project.ownerEmail) && (
-        <div className="mb-3 border-t border-gray-100 pt-2">
-           <p className="text-[10px] text-gray-400 mb-1 font-medium">بيانات المالك</p>
-           <div className="space-y-1">
-              {project.ownerName && (
-                 <div className="flex items-center gap-1.5 text-sm font-semibold text-gray-800">
-                    <User className="w-3.5 h-3.5 text-gray-400" />
-                    <span className="truncate">{project.ownerName}</span>
-                 </div>
-              )}
-              {project.ownerPhone && (
-                 <div className="flex items-center justify-between text-xs text-gray-600 group/phone">
-                    <div className="flex items-center gap-1.5">
-                       <Phone className="w-3 h-3 text-gray-400" />
-                       <span className="font-mono dir-ltr">{project.ownerPhone}</span>
-                    </div>
-                    <button onClick={() => copyToClipboard(project.ownerPhone)} className="text-blue-500 opacity-0 group-hover/phone:opacity-100 px-1 text-[10px]">نسخ</button>
-                 </div>
-              )}
-              {project.ownerEmail && (
-                 <div className="flex items-center justify-between text-xs text-gray-600 group/email">
-                    <div className="flex items-center gap-1.5 overflow-hidden">
-                       <Mail className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                       <span className="truncate font-mono">{project.ownerEmail}</span>
-                    </div>
-                    <button onClick={() => copyToClipboard(project.ownerEmail)} className="text-blue-500 opacity-0 group-hover/email:opacity-100 px-1 text-[10px]">نسخ</button>
-                 </div>
-              )}
-           </div>
-        </div>
-      )}
-
-      {/* Notes & Update */}
-      <div className="mt-auto pt-2 border-t border-gray-50 space-y-2">
-         {(project.lastUpdateDate || project.lastUpdateNote) && (
-            <div className="bg-amber-50 border border-amber-100 rounded p-2">
-               <div className="flex items-center gap-1 mb-1 text-[10px] text-amber-800 font-bold">
-                  <History className="w-3 h-3" />
-                  <span>تحديث: {project.lastUpdateDate}</span>
-               </div>
-               {project.lastUpdateNote && <p className="text-[10px] text-gray-600 leading-relaxed">{project.lastUpdateNote}</p>}
-            </div>
-         )}
-         {project.notes && (
-            <div className="flex items-start gap-1.5 text-[10px] text-gray-500 bg-gray-50 p-1.5 rounded border border-gray-100">
-               <FileText className="w-3 h-3 mt-0.5 text-gray-400 shrink-0" />
-               <p className="line-clamp-2">{project.notes}</p>
-            </div>
-         )}
+         <div className="flex gap-1 flex-shrink-0">
+            {project.ownerPhone && (
+               <>
+                 <a href={`https://wa.me/${project.ownerPhone.replace(/\s+/g, '')}`} target="_blank" rel="noreferrer" className="p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded transition" title="واتساب">
+                    <MessageCircle className="w-4 h-4" />
+                 </a>
+                 <button onClick={() => navigator.clipboard.writeText(project.ownerPhone)} className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded transition"><Phone className="w-4 h-4" /></button>
+               </>
+            )}
+         </div>
       </div>
     </div>
   );
 };
 
-// 4. AI Advisor
-const AIAdvisor = ({ projects }) => {
-  const [loading, setLoading] = useState(false);
-  const [analysis, setAnalysis] = useState(null);
-  const [error, setError] = useState(null);
+// --- View Components ---
 
-  const analyzeProjects = async () => {
-    if (projects.length === 0) {
-      setAnalysis("لا توجد مشاريع حالياً للتحليل.");
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    const prompt = `بصفتك مستشار مالي وهندسي، حلل المشاريع التالية باختصار: ${JSON.stringify(projects.map(p => ({
-      name: p.name, 
-      status: p.status, 
-      price: p.price,
-      collected: p.collectedAmount,
-      execution: p.executionStatus
-    })))}`;
-    
-    try {
-      const response = await fetch(AI_MODEL_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
-      if (!response.ok) throw new Error('فشل الاتصال');
-      const data = await response.json();
-      setAnalysis(data.candidates?.[0]?.content?.parts?.[0]?.text);
-    } catch (err) { setError("حدث خطأ."); } finally { setLoading(false); }
-  };
+const KanbanView = ({ projects, onEdit, onDelete, onArchive }) => {
+  // Group projects by Execution Status
+  const columns = EXECUTION_STATUS_OPTIONS.map(status => ({
+    ...status,
+    projects: projects.filter(p => p.executionStatus === status.id)
+  }));
 
   return (
-    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-6 shadow-sm border border-indigo-100 mb-8">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-bold text-indigo-900 flex items-center gap-2"><BrainCircuit className="w-6 h-6 text-indigo-600" /> المستشار الذكي</h3>
-        <button onClick={analyzeProjects} disabled={loading} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center gap-2 text-sm transition-colors disabled:opacity-50">
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <BrainCircuit className="w-4 h-4" />} تحليل
-        </button>
-      </div>
-      {analysis && <div className="bg-white p-4 rounded-lg border border-indigo-100 text-gray-700 text-sm leading-relaxed">{analysis}</div>}
+    <div className="flex overflow-x-auto pb-6 gap-4 h-[calc(100vh-220px)] custom-scrollbar">
+      {columns.map(col => (
+        <div key={col.id} className="min-w-[300px] w-[300px] flex flex-col bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-200 dark:border-gray-700 h-full">
+          <div className={`p-3 border-b border-gray-200 dark:border-gray-700 font-bold flex justify-between items-center sticky top-0 bg-inherit rounded-t-xl z-10 ${col.color.split(' ')[0]}`}>
+            {col.label}
+            <span className="bg-white dark:bg-gray-800 px-2 py-0.5 rounded-full text-xs shadow-sm">{col.projects.length}</span>
+          </div>
+          <div className="p-3 space-y-3 overflow-y-auto flex-1 custom-scrollbar">
+            {col.projects.map(p => (
+              <ProjectCard key={p.id} project={p} onEdit={onEdit} onDelete={onDelete} onArchive={onArchive} />
+            ))}
+            {col.projects.length === 0 && (
+              <div className="text-center py-8 text-gray-400 text-xs border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">لا توجد مشاريع</div>
+            )}
+          </div>
+        </div>
+      ))}
     </div>
   );
 };
 
-// 5. Main App Component
+const CalendarView = ({ projects, onEdit }) => {
+  // Simple Month View Logic
+  const [currentDate, setCurrentDate] = useState(new Date());
+  
+  const getDaysInMonth = (date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  const daysInMonth = getDaysInMonth(currentDate);
+  const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay(); // 0 = Sun
+  
+  // Adjust for Saturday start if needed, here assuming Sun start
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+  
+  const projectsByDate = projects.reduce((acc, p) => {
+    if (p.contractEndDate) {
+      const d = new Date(p.contractEndDate);
+      if (d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear()) {
+        const day = d.getDate();
+        if (!acc[day]) acc[day] = [];
+        acc[day].push(p);
+      }
+    }
+    return acc;
+  }, {});
+
+  const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+
+  const monthName = currentDate.toLocaleString('ar-SA', { month: 'long', year: 'numeric' });
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden h-full flex flex-col">
+      <div className="p-4 flex justify-between items-center border-b border-gray-200 dark:border-gray-700">
+        <button onClick={prevMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">السابق</button>
+        <h3 className="font-bold text-lg text-gray-800 dark:text-white">{monthName}</h3>
+        <button onClick={nextMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">التالي</button>
+      </div>
+      <div className="grid grid-cols-7 text-center text-xs font-bold text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+        {['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'].map(d => <div key={d} className="py-3">{d}</div>)}
+      </div>
+      <div className="grid grid-cols-7 flex-1 auto-rows-fr bg-gray-50 dark:bg-gray-900">
+        {Array.from({ length: firstDay }).map((_, i) => <div key={`empty-${i}`} className="border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800/50"></div>)}
+        {days.map(day => (
+          <div key={day} className="border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 p-2 min-h-[100px] overflow-y-auto relative group">
+            <span className="text-xs font-bold text-gray-400 absolute top-1 right-2">{day}</span>
+            <div className="mt-4 space-y-1">
+              {projectsByDate[day]?.map(p => (
+                <button key={p.id} onClick={() => onEdit(p)} className="w-full text-right text-[10px] bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 p-1 rounded truncate hover:bg-blue-100 dark:hover:bg-blue-900/50 block">
+                  {p.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// 5. Main App
 export default function App() {
   const [user, setUser] = useState(null);
   const [projects, setProjects] = useState([]);
@@ -678,6 +538,12 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+  // New States
+  const [viewMode, setViewMode] = useState('cards'); // cards, kanban, calendar
+  const [darkMode, setDarkMode] = useState(false);
+  const [sortBy, setSortBy] = useState('newest'); // newest, oldest, price_high, price_low, end_date
+  const [showArchived, setShowArchived] = useState(false);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -693,21 +559,24 @@ export default function App() {
     const projectsRef = getProjectsCollection();
     return onSnapshot(projectsRef, (snapshot) => {
       const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      fetched.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
       setProjects(fetched);
       setLoading(false);
     });
   }, [user]);
 
+  // Toggle Dark Mode Class
+  useEffect(() => {
+    if (darkMode) document.documentElement.classList.add('dark');
+    else document.documentElement.classList.remove('dark');
+  }, [darkMode]);
+
   const handleSave = async (data) => {
     if (!user) return;
     try {
       if (editingProject) {
-        const docRef = getProjectDoc(editingProject.id);
-        await updateDoc(docRef, { ...data });
+        await updateDoc(getProjectDoc(editingProject.id), data);
       } else {
-        const collectionRef = getProjectsCollection();
-        await addDoc(collectionRef, { ...data, createdAt: serverTimestamp(), createdBy: user.uid });
+        await addDoc(getProjectsCollection(), { ...data, createdAt: serverTimestamp(), createdBy: user.uid });
       }
       setIsFormOpen(false);
       setEditingProject(null);
@@ -719,151 +588,176 @@ export default function App() {
     try { await deleteDoc(getProjectDoc(id)); } catch (err) { console.error(err); }
   };
 
-  const openEdit = (project) => {
-    setEditingProject(project);
-    setIsFormOpen(true);
+  const handleArchive = async (project) => {
+    try { await updateDoc(getProjectDoc(project.id), { isArchived: !project.isArchived }); } catch (err) { console.error(err); }
   };
 
-  // Filter Logic
-  const filteredProjects = projects.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          p.ownerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          p.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          p.designEngineer?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          p.projectSource?.toLowerCase().includes(searchTerm.toLowerCase());
+  const processedProjects = useMemo(() => {
+    let filtered = projects.filter(p => {
+      // Archive Filter
+      if (p.isArchived && !showArchived) return false;
+      if (!p.isArchived && showArchived) return false; // Show only archived if toggled
 
-    let matchesTab = false;
-    if (activeTab === 'all') {
-      matchesTab = true;
-    } 
-    else if (['ongoing', 'stalled', 'financially_halted', 'under_study'].includes(activeTab)) {
-      matchesTab = p.executionStatus === activeTab;
-    }
-    else if (activeTab === 'source_private') {
-      matchesTab = p.projectSource === 'مشروع خاص';
-    }
-    else if (activeTab === 'source_etimad') {
-      matchesTab = p.projectSource && p.projectSource.includes('اعتماد');
-    }
-    else if (activeTab === 'source_modon') {
-      matchesTab = p.projectSource && p.projectSource.includes('مدن');
-    }
-    else if (activeTab === 'source_gov') {
-      matchesTab = p.projectSource && (p.projectSource.includes('حكومية') || p.projectSource.includes('مناقصة'));
-    }
-    else if (activeTab === 'source_royal') {
-      matchesTab = p.projectSource && p.projectSource.includes('الهيئات');
-    }
+      // Search Filter
+      const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                            p.ownerName?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // Tab Filter
+      let matchesTab = false;
+      if (activeTab === 'all') matchesTab = true;
+      else if (['ongoing', 'stalled', 'financially_halted', 'under_study'].includes(activeTab)) matchesTab = p.executionStatus === activeTab;
+      else if (activeTab === 'source_private') matchesTab = p.projectSource === 'مشروع خاص';
+      else if (activeTab === 'source_etimad') matchesTab = p.projectSource && p.projectSource.includes('اعتماد');
+      else if (activeTab === 'source_gov') matchesTab = p.projectSource && (p.projectSource.includes('حكومية') || p.projectSource.includes('مناقصة'));
+      
+      return matchesSearch && matchesTab;
+    });
 
-    return matchesSearch && matchesTab;
-  });
+    // Sorting
+    return filtered.sort((a, b) => {
+      if (sortBy === 'price_high') return (Number(b.price) || 0) - (Number(a.price) || 0);
+      if (sortBy === 'price_low') return (Number(a.price) || 0) - (Number(b.price) || 0);
+      if (sortBy === 'end_date') return new Date(a.contractEndDate || '2099') - new Date(b.contractEndDate || '2099');
+      if (sortBy === 'oldest') return (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0);
+      return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0); // Newest default
+    });
+  }, [projects, activeTab, searchTerm, sortBy, showArchived]);
 
   const stats = {
-    total: projects.length,
-    totalValue: projects.reduce((acc, p) => {
-      const isSigned = 
-        p.submissionStage === 'تمت الترسية' || 
-        (!p.submissionStage && ['جاري التصميم', 'جاري الإشراف', 'مكتمل'].includes(p.status));
-      return isSigned ? acc + (Number(p.price) || 0) : acc;
-    }, 0),
-    totalCollected: projects.reduce((acc, curr) => acc + (Number(curr.collectedAmount) || 0), 0),
-    stalledCount: projects.filter(p => p.executionStatus === 'stalled').length
+    total: projects.filter(p => !p.isArchived).length,
+    totalValue: projects.reduce((acc, p) => !p.isArchived && p.submissionStage === 'تمت الترسية' ? acc + (Number(p.price) || 0) : acc, 0),
+    stalledCount: projects.filter(p => !p.isArchived && p.executionStatus === 'stalled').length
   };
 
-  if (!isAuthenticated) {
-    return <LoginScreen onLogin={() => setIsAuthenticated(true)} />;
-  }
-
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><Loader2 className="w-10 h-10 animate-spin text-blue-600" /></div>;
+  if (!isAuthenticated) return <LoginScreen onLogin={() => setIsAuthenticated(true)} />;
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900"><Loader2 className="w-10 h-10 animate-spin text-blue-600" /></div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans text-gray-800" dir="rtl">
-      <header className="bg-white shadow-sm sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans text-gray-800 dark:text-gray-100 transition-colors duration-300" dir="rtl">
+      {/* Header */}
+      <header className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-30 border-b border-gray-200 dark:border-gray-700">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="flex items-center gap-3 w-full md:w-auto justify-center md:justify-start order-2 md:order-1">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-blue-200">
+            {/* Logo & Title */}
+            <div className="flex items-center gap-3 w-full md:w-auto order-2 md:order-1">
+              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-blue-200 dark:shadow-none">
                 <LayoutDashboard className="w-6 h-6" />
               </div>
               <div>
-                <h1 className="text-xl font-extrabold text-gray-900">إدارة المكتب الهندسي</h1>
-                <p className="text-xs text-gray-500">منظومة متابعة المشاريع والتحصيل</p>
+                <h1 className="text-xl font-extrabold text-gray-900 dark:text-white">لوحة تحكم المشـاريع</h1>
+                <p className="text-xs text-gray-500 dark:text-gray-400">CMDEC Projects Dashboard</p>
               </div>
             </div>
-            <div className="order-1 md:order-2 mb-2 md:mb-0">
-               <img src="download (1).jpg" alt="Logo" className="h-20 object-contain" onError={(e) => {e.target.style.display = 'none';}} />
+
+            {/* Center Logo (if exists) */}
+            <div className="order-1 md:order-2">
+               <img src="download (1).jpg" alt="Logo" className="h-16 object-contain" onError={(e) => {e.target.style.display = 'none';}} />
             </div>
-            <div className="flex items-center gap-3 w-full md:w-auto justify-center md:justify-end order-3">
-               <div className="relative flex-1 md:flex-none md:w-64">
-                <Search className="w-4 h-4 absolute right-3 top-3 text-gray-400" />
-                <input type="text" placeholder="بحث..." className="w-full pl-4 pr-10 py-2 bg-gray-100 rounded-full text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            
+            {/* Toolbar */}
+            <div className="flex items-center gap-2 w-full md:w-auto justify-end order-3">
+               <div className="relative hidden md:block">
+                <Search className="w-4 h-4 absolute right-3 top-2.5 text-gray-400" />
+                <input type="text" placeholder="بحث..." className="pl-4 pr-9 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none w-48" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                </div>
-               <button onClick={() => { setEditingProject(null); setIsFormOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full font-medium text-sm flex items-center gap-2 shadow-lg transition active:scale-95">
-                <Plus className="w-4 h-4" /> <span className="hidden sm:inline">مشروع جديد</span>
-              </button>
+               
+               {/* View Switcher */}
+               <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                 <button onClick={() => setViewMode('cards')} className={`p-1.5 rounded ${viewMode === 'cards' ? 'bg-white dark:bg-gray-600 shadow-sm' : 'text-gray-500'}`} title="كروت"><LayoutGrid className="w-4 h-4" /></button>
+                 <button onClick={() => setViewMode('kanban')} className={`p-1.5 rounded ${viewMode === 'kanban' ? 'bg-white dark:bg-gray-600 shadow-sm' : 'text-gray-500'}`} title="كانبان"><Kanban className="w-4 h-4" /></button>
+                 <button onClick={() => setViewMode('calendar')} className={`p-1.5 rounded ${viewMode === 'calendar' ? 'bg-white dark:bg-gray-600 shadow-sm' : 'text-gray-500'}`} title="تقويم"><CalendarIcon className="w-4 h-4" /></button>
+               </div>
+
+               {/* Actions */}
+               <button onClick={() => setDarkMode(!darkMode)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-600 dark:text-gray-300">
+                 {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+               </button>
+               <button onClick={() => exportToCSV(processedProjects)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-600 dark:text-gray-300" title="تصدير Excel"><Download className="w-5 h-5" /></button>
+               <button onClick={() => { setEditingProject(null); setIsFormOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg shadow-lg"><Plus className="w-5 h-5" /></button>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-           <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-              <p className="text-xs text-gray-500 mb-1">إجمالي العقود (الموقعة)</p>
-              <h3 className="text-xl font-bold text-gray-900">{stats.totalValue.toLocaleString()} <span className="text-xs font-normal">ر.س</span></h3>
-           </div>
-           <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-              <p className="text-xs text-gray-500 mb-1">إجمالي المحصل</p>
-              <h3 className="text-xl font-bold text-emerald-600">{stats.totalCollected.toLocaleString()} <span className="text-xs font-normal">ر.س</span></h3>
-           </div>
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-              <p className="text-xs text-gray-500 mb-1">عدد المشاريع</p>
-              <h3 className="text-xl font-bold text-blue-600">{stats.total}</h3>
-           </div>
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-              <p className="text-xs text-gray-500 mb-1">مشاريع متعثرة</p>
-              <h3 className="text-xl font-bold text-red-600">{stats.stalledCount}</h3>
-           </div>
-           <div className="md:col-span-4">
-             <AIAdvisor projects={projects} />
-           </div>
-        </div>
-
-        <div className="flex overflow-x-auto pb-4 mb-6 gap-2 no-scrollbar">
-          {FILTERS.map(filter => {
-            const Icon = filter.icon;
-            return (
-              <button key={filter.id} onClick={() => setActiveTab(filter.id)} className={`px-4 py-2 rounded-lg font-medium text-xs whitespace-nowrap transition-all border flex items-center gap-2 ${activeTab === filter.id ? 'bg-gray-800 text-white border-gray-800 shadow-lg' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>
-                {Icon && <Icon className="w-3.5 h-3.5" />} {filter.label}
+      {/* Sub-Header (Filters & Sort) */}
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-2 overflow-x-auto no-scrollbar">
+        <div className="max-w-7xl mx-auto px-4 flex items-center gap-4 min-w-max">
+          <div className="flex gap-2">
+            {FILTERS.map(filter => (
+              <button key={filter.id} onClick={() => setActiveTab(filter.id)} className={`px-3 py-1.5 rounded-md font-medium text-xs whitespace-nowrap flex items-center gap-1.5 transition ${activeTab === filter.id ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>
+                <filter.icon className="w-3.5 h-3.5" /> {filter.label}
               </button>
-            );
-          })}
-        </div>
-
-        {filteredProjects.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredProjects.map(project => (
-              <ProjectCard 
-                key={project.id} 
-                project={project} 
-                onEdit={(p) => { setEditingProject(p); setIsFormOpen(true); }} 
-                onDelete={handleDelete}
-              />
             ))}
           </div>
+          <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-2"></div>
+          <select className="bg-transparent text-xs font-bold text-gray-600 dark:text-gray-300 outline-none cursor-pointer" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+            <option value="newest">الأحدث إضافة</option>
+            <option value="oldest">الأقدم إضافة</option>
+            <option value="price_high">الأعلى سعراً</option>
+            <option value="price_low">الأقل سعراً</option>
+            <option value="end_date">الأقرب تسليماً</option>
+          </select>
+          <button onClick={() => setShowArchived(!showArchived)} className={`text-xs font-bold flex items-center gap-1 ${showArchived ? 'text-amber-600' : 'text-gray-400 hover:text-gray-600'}`}>
+            <Archive className="w-3.5 h-3.5" /> {showArchived ? 'عرض النشط' : 'الأرشيف'}
+          </button>
+        </div>
+      </div>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 h-[calc(100vh-130px)] overflow-y-auto custom-scrollbar">
+        {/* Stats (Only show in Cards View for space) */}
+        {viewMode === 'cards' && !showArchived && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+             <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">إجمالي العقود الموقعة</p>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">{stats.totalValue.toLocaleString()} <span className="text-xs font-normal">ر.س</span></h3>
+             </div>
+             <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">مشاريع متعثرة</p>
+                <h3 className="text-xl font-bold text-red-600">{stats.stalledCount}</h3>
+             </div>
+             <div className="md:col-span-2 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800/50 flex items-center justify-between">
+               <div>
+                 <h4 className="font-bold text-blue-900 dark:text-blue-300 text-sm mb-1">المستشار الذكي</h4>
+                 <p className="text-xs text-blue-700 dark:text-blue-400">تحليل للمخاطر المالية والزمنية</p>
+               </div>
+               <button className="bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm hover:shadow-md transition">تحليل الآن</button>
+             </div>
+          </div>
+        )}
+
+        {/* Content Area */}
+        {processedProjects.length > 0 ? (
+          <>
+            {viewMode === 'cards' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
+                {processedProjects.map(p => (
+                  <ProjectCard key={p.id} project={p} onEdit={(p) => { setEditingProject(p); setIsFormOpen(true); }} onDelete={handleDelete} onArchive={handleArchive} />
+                ))}
+              </div>
+            )}
+            {viewMode === 'kanban' && (
+              <KanbanView projects={processedProjects} onEdit={(p) => { setEditingProject(p); setIsFormOpen(true); }} onDelete={handleDelete} onArchive={handleArchive} />
+            )}
+            {viewMode === 'calendar' && (
+              <CalendarView projects={processedProjects} onEdit={(p) => { setEditingProject(p); setIsFormOpen(true); }} />
+            )}
+          </>
         ) : (
-          <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-300">
-            <Search className="w-8 h-8 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900">لا توجد نتائج</h3>
+          <div className="flex flex-col items-center justify-center h-64 text-center">
+            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
+              <Search className="w-8 h-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">لا توجد مشاريع</h3>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">حاول تغيير الفلاتر أو أضف مشروعاً جديداً</p>
           </div>
         )}
       </main>
 
       {isFormOpen && <ProjectForm onClose={() => { setIsFormOpen(false); setEditingProject(null); }} initialData={editingProject} onSave={handleSave} />}
       
-      <div className="fixed bottom-4 left-4 bg-white/90 backdrop-blur border border-gray-200 px-3 py-1.5 rounded-full text-[10px] text-gray-500 flex items-center gap-2 shadow-sm z-50">
+      <div className="fixed bottom-4 left-4 bg-white/90 dark:bg-gray-800/90 backdrop-blur border border-gray-200 dark:border-gray-700 px-3 py-1.5 rounded-full text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-2 shadow-sm z-50">
         <div className={`w-2 h-2 rounded-full ${USE_CUSTOM_DB ? 'bg-green-500' : 'bg-amber-500'}`}></div>
-        <span className="font-medium">{USE_CUSTOM_DB ? 'قاعدة بيانات خاصة' : 'وضع التجربة'}</span>
+        <span className="font-medium">{USE_CUSTOM_DB ? 'متصل بقاعدة بيانات خاصة' : 'وضع التجربة'}</span>
       </div>
     </div>
   );
